@@ -53,6 +53,7 @@ set(SOURCES
     src/core/PairingManager.cpp
     src/core/PairingCrypto.cpp
     src/ui/PairingDialog.cpp
+    src/core/AdbManager.cpp
     resources/resources.qrc
 )
 

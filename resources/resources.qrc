@@ -3,4 +3,9 @@
   <qresource prefix="/icons">
     <!-- Adicionar devlink.ico e devlink_active.ico aqui depois -->
   </qresource>
+  <qresource prefix="/adb">
+    <file>adb/adb.exe</file>
+    <file>adb/AdbWinApi.dll</file>
+    <file>adb/AdbWinUsbApi.dll</file>
+  </qresource>
 </RCC>

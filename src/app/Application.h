@@ -6,6 +6,7 @@ class WsServer;
 class MdnsService;
 class PairingManager;
 class PairingDialog;
+class AdbManager;
 
 class Application
 {
@@ -23,4 +24,5 @@ private:
     std::unique_ptr<MdnsService>    m_mdns;
     std::unique_ptr<PairingManager> m_pairing;
     PairingDialog*                  m_pairingDialog = nullptr;
+    std::unique_ptr<AdbManager>     m_adb;
 };

@@ -13,6 +13,7 @@ public:
     ~TrayIcon() override;
 
     void show();
+    void showNotification(const QString& title, const QString& message);
 
 signals:
     void pairRequested();

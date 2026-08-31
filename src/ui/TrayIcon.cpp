@@ -89,6 +89,11 @@ void TrayIcon::onQuit()
     QApplication::quit();
 }
 
+void TrayIcon::showNotification(const QString& title, const QString& message)
+{
+    m_tray->showMessage(title, message, QSystemTrayIcon::Information, 3000);
+}
+
 void TrayIcon::onPairDevice()
 {
     emit pairRequested();

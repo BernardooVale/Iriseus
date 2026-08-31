@@ -6,6 +6,7 @@
 #include "ui/PairingDialog.h"
 #include <QApplication>
 #include <QDebug>
+#include "core/AdbManager.h"
 
 Application::Application() = default;
 Application::~Application() = default;
@@ -32,6 +33,25 @@ bool Application::init()
             }
         }, Qt::QueuedConnection);
     });
+
+    m_adb = std::make_unique<AdbManager>(45678, 45679); // 45679 = porta stream TCP futura
+    if (!m_adb->init()) {
+        qWarning() << "AdbManager: falha na inicialização";
+        // não fatal — modo WiFi ainda funciona
+    }
+    m_adb->setOnDeviceAttached([this](const AdbDevice& dev) {
+        QMetaObject::invokeMethod(qApp, [this, dev] {
+            qDebug() << "USB conectado:" << dev.serial.c_str();
+            m_tray->showNotification("DevLink",
+                "Celular conectado via USB: " + QString::fromStdString(dev.serial));
+        }, Qt::QueuedConnection);
+    });
+    m_adb->setOnDeviceDetached([this](const std::string& serial) {
+        QMetaObject::invokeMethod(qApp, [this, serial] {
+            qDebug() << "USB desconectado:" << serial.c_str();
+        }, Qt::QueuedConnection);
+    });
+    m_adb->start();
 
     m_tray = std::make_unique<TrayIcon>();
     m_tray->show();
