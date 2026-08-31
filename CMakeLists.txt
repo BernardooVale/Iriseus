@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
+set(FETCHCONTENT_BASE_DIR "C:/local/cmake_deps" CACHE PATH "FetchContent cache")
 project(Iriseus VERSION 0.1.0 LANGUAGES CXX)
 
 add_compile_definitions(_WIN32_WINNT=0x0601)
@@ -22,6 +23,11 @@ FetchContent_Declare(json
 )
 FetchContent_MakeAvailable(json)
 
+FetchContent_Declare(mdns
+    URL https://github.com/mjansson/mdns/archive/refs/heads/master.zip
+)
+FetchContent_MakeAvailable(mdns)
+
 # Qt — ajuste Qt6_DIR para seu ambiente
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
@@ -31,6 +37,7 @@ set(SOURCES
     src/ui/TrayIcon.cpp
     src/core/WsServer.cpp
     src/core/WsSession.cpp
+    src/core/MdnsService.cpp
     resources/resources.qrc
 )
 
@@ -39,6 +46,7 @@ add_executable(Iriseus WIN32 ${SOURCES})
 target_include_directories(Iriseus PRIVATE 
     src
     ${Boost_INCLUDE_DIRS}
+    ${mdns_SOURCE_DIR}
 )
 
 target_link_libraries(Iriseus PRIVATE
@@ -49,6 +57,7 @@ target_link_libraries(Iriseus PRIVATE
     ws2_32      
     wsock32
     nlohmann_json::nlohmann_json
+    iphlpapi 
 )
 
 # Manifesto Windows — DPI awareness, compatibilidade

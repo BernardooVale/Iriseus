@@ -2,6 +2,7 @@
 #include "ui/TrayIcon.h"
 #include "core/WsServer.h"
 #include <QDebug>
+#include "core/MdnsService.h"
 
 Application::Application() = default;
 Application::~Application() = default;
@@ -16,6 +17,9 @@ bool Application::init()
         qWarning() << "DevLink: falha ao iniciar servidor WebSocket na porta 45678";
         return false;
     }
+
+    m_mdns = std::make_unique<MdnsService>("devlink-pc", 45678);
+    m_mdns->start();
 
     m_tray = std::make_unique<TrayIcon>();
     m_tray->show();
