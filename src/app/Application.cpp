@@ -1,28 +1,48 @@
 #include "Application.h"
 #include "ui/TrayIcon.h"
 #include "core/WsServer.h"
-#include <QDebug>
 #include "core/MdnsService.h"
+#include "core/PairingManager.h"
+#include "ui/PairingDialog.h"
+#include <QApplication>
+#include <QDebug>
 
 Application::Application() = default;
 Application::~Application() = default;
 
 bool Application::init()
 {
-
     m_wsServer = std::make_unique<WsServer>(45678);
     setupServerCallbacks();
 
     if (!m_wsServer->start()) {
-        qWarning() << "DevLink: falha ao iniciar servidor WebSocket na porta 45678";
+        qWarning() << "Iriseus: falha ao iniciar servidor WebSocket na porta 45678";
         return false;
     }
 
-    m_mdns = std::make_unique<MdnsService>("devlink-pc", 45678);
+    m_mdns = std::make_unique<MdnsService>("iriseus-pc", 45678);
     m_mdns->start();
+
+    m_pairing = std::make_unique<PairingManager>(45678);
+    m_pairing->setOnPaired([this](const PairedDevice& device) {
+        QMetaObject::invokeMethod(qApp, [this, device] {
+            if (m_pairingDialog) {
+                m_pairingDialog->onPairingComplete(
+                    QString::fromStdString(device.deviceName));
+            }
+        }, Qt::QueuedConnection);
+    });
 
     m_tray = std::make_unique<TrayIcon>();
     m_tray->show();
+
+    QObject::connect(m_tray.get(), &TrayIcon::pairRequested, qApp, [this] {
+        auto offer      = m_pairing->createOffer();
+        m_pairingDialog = new PairingDialog(offer);
+        m_pairingDialog->exec();
+        m_pairingDialog = nullptr;
+    });
+
     return true;
 }
 
@@ -30,19 +50,27 @@ void Application::setupServerCallbacks()
 {
     ServerCallbacks cb;
 
-    cb.onDeviceConnected = [this](uint64_t id, const std::string& name) {
+    cb.onDeviceConnected = [](uint64_t id, const std::string& name) {
         qDebug() << "Dispositivo conectado:" << QString::fromStdString(name) << "id=" << id;
-        // TODO: notificar TrayIcon para atualizar status
     };
-    cb.onDeviceDisconnected = [this](uint64_t id) {
+    cb.onDeviceDisconnected = [](uint64_t id) {
         qDebug() << "Dispositivo desconectado id=" << id;
     };
-    cb.onStartCamera = [this](uint64_t /*id*/) {
+    cb.onStartCamera = [](uint64_t /*id*/) {
         qDebug() << "StartCamera solicitado";
-        // TODO: acionar pipeline FFmpeg → Softcam
     };
-    cb.onStopCamera = [this](uint64_t /*id*/) {
+    cb.onStopCamera = [](uint64_t /*id*/) {
         qDebug() << "StopCamera solicitado";
+    };
+    cb.onPairRequest = [this](uint64_t sessionId, const json& payload) {
+        auto pin        = payload.value("pin",        "");
+        auto peerPubB64 = payload.value("pk",         "");
+        auto deviceId   = payload.value("deviceId",   "");
+        auto deviceName = payload.value("deviceName", "");
+
+        bool ok = m_pairing->handlePairRequest(pin, peerPubB64, deviceId, deviceName);
+        json reply = {{"type", ok ? "pair_accepted" : "pair_rejected"}};
+        m_wsServer->sendTo(sessionId, reply.dump());
     };
 
     m_wsServer->setCallbacks(std::move(cb));

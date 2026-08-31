@@ -18,6 +18,10 @@ enum class MsgType {
     Pong,         // {"type":"pong"}
     Error,        // {"type":"error","message":"..."}
 
+    PairRequest,
+    PairAccepted,
+    PairRejected,
+
     Unknown
 };
 
@@ -32,6 +36,9 @@ inline MsgType msgTypeFromString(const std::string& s)
     if (s == "start_camera") return MsgType::StartCamera;
     if (s == "stop_camera")  return MsgType::StopCamera;
     if (s == "ping")         return MsgType::Ping;
+    if (s == "pair_request")  return MsgType::PairRequest;
+    if (s == "pair_accepted") return MsgType::PairAccepted;
+    if (s == "pair_rejected") return MsgType::PairRejected;
     if (s == "welcome")      return MsgType::Welcome;
     if (s == "pong")         return MsgType::Pong;
     if (s == "error")        return MsgType::Error;

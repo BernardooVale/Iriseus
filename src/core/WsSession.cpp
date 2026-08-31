@@ -76,6 +76,13 @@ void WsSession::handleMessage(const std::string& raw)
         send(pong.dump());
         break;
     }
+    case MsgType::PairRequest: {
+        // WsSession não tem acesso direto ao PairingManager
+        // delega via callback genérico
+        if (m_callbacks.onPairRequest)
+            m_callbacks.onPairRequest(m_id, msg.payload);
+        break;
+    }
     default:
         break;
     }

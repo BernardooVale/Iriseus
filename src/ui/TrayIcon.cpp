@@ -37,14 +37,16 @@ void TrayIcon::buildMenu()
 
     m_actionStartCamera = m_menu->addAction("Iniciar câmera");
     m_actionStopCamera  = m_menu->addAction("Parar câmera");
+    m_actionPair        = m_menu->addAction("Parear novo dispositivo...");
     m_actionStopCamera->setVisible(false);
 
     m_menu->addSeparator();
     QAction* actionQuit = m_menu->addAction("Sair");
 
-    connect(m_actionStartCamera, &QAction::triggered, this, &TrayIcon::onStartCamera);
-    connect(m_actionStopCamera,  &QAction::triggered, this, &TrayIcon::onStopCamera);
-    connect(actionQuit,          &QAction::triggered, this, &TrayIcon::onQuit);
+    connect(m_actionStartCamera,    &QAction::triggered, this, &TrayIcon::onStartCamera);
+    connect(m_actionStopCamera,     &QAction::triggered, this, &TrayIcon::onStopCamera);
+    connect(actionQuit,             &QAction::triggered, this, &TrayIcon::onQuit);
+    connect(m_actionPair,           &QAction::triggered, this, &TrayIcon::onPairDevice);
 }
 
 void TrayIcon::updateIcon(bool active)
@@ -85,4 +87,9 @@ void TrayIcon::onQuit()
 {
     m_tray->hide();
     QApplication::quit();
+}
+
+void TrayIcon::onPairDevice()
+{
+    emit pairRequested();
 }

@@ -14,20 +14,25 @@ public:
 
     void show();
 
+signals:
+    void pairRequested();
+
 private slots:
     void onActivated(QSystemTrayIcon::ActivationReason reason);
     void onStartCamera();
     void onStopCamera();
     void onQuit();
+    void onPairDevice();
 
 private:
     void updateIcon(bool active);
     void buildMenu();
 
-    std::unique_ptr<QSystemTrayIcon> m_tray;
-    std::unique_ptr<QMenu>           m_menu;
-    QAction*                         m_actionStartCamera = nullptr;
-    QAction*                         m_actionStopCamera  = nullptr;
+    std::unique_ptr<QSystemTrayIcon>    m_tray;
+    std::unique_ptr<QMenu>              m_menu;
+    QAction*                            m_actionStartCamera = nullptr;
+    QAction*                            m_actionStopCamera  = nullptr;
+    QAction*                            m_actionPair        = nullptr;
 
     bool m_cameraActive = false;
 };

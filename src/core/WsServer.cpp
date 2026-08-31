@@ -74,6 +74,10 @@ void WsServer::doAccept()
                     if (m_callbacks.onDeviceDisconnected)
                         m_callbacks.onDeviceDisconnected(sid);
                 };
+                scb.onPairRequest = [this](uint64_t sid, const json& payload) {
+                    if (m_callbacks.onPairRequest)
+                        m_callbacks.onPairRequest(sid, payload);
+                };
 
                 auto session = std::make_shared<WsSession>(
                     std::move(socket), id, std::move(scb));
@@ -87,4 +91,11 @@ void WsServer::doAccept()
 void WsServer::removeSession(uint64_t sessionId)
 {
     m_sessions.erase(sessionId);
+}
+
+void WsServer::sendTo(uint64_t sessionId, const std::string& message)
+{
+    auto it = m_sessions.find(sessionId);
+    if (it != m_sessions.end())
+        it->second->send(message);
 }

@@ -6,7 +6,9 @@
 #include <string>
 #include <functional>
 #include <boost/beast/core/tcp_stream.hpp>
+#include <nlohmann/json.hpp>
 
+using json = nlohmann::json;
 namespace beast = boost::beast;
 namespace ws    = beast::websocket;
 namespace asio  = boost::asio;
@@ -18,6 +20,7 @@ struct SessionCallbacks {
     std::function<void(uint64_t sessionId)> onStartCamera;
     std::function<void(uint64_t sessionId)> onStopCamera;
     std::function<void(uint64_t sessionId)> onDisconnect;
+    std::function<void(uint64_t sessionId, const json& payload)> onPairRequest;
 };
 
 class WsSession : public std::enable_shared_from_this<WsSession>

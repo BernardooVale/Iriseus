@@ -7,7 +7,9 @@
 #include <atomic>
 #include <functional>
 #include "WsSession.h"
+#include <nlohmann/json.hpp>
 
+using json = nlohmann::json;
 namespace asio = boost::asio;
 using tcp      = asio::ip::tcp;
 
@@ -16,6 +18,7 @@ struct ServerCallbacks {
     std::function<void(uint64_t sessionId)> onDeviceDisconnected;
     std::function<void(uint64_t sessionId)> onStartCamera;
     std::function<void(uint64_t sessionId)> onStopCamera;
+    std::function<void(uint64_t sessionId, const json& payload)> onPairRequest;
 };
 
 class WsServer
@@ -27,6 +30,7 @@ public:
     void setCallbacks(ServerCallbacks cb);
     bool start();
     void stop();
+    void sendTo(uint64_t sessionId, const std::string& message);
 
     bool isRunning() const { return m_running.load(); }
 
