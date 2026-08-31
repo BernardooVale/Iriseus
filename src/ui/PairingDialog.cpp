@@ -14,7 +14,7 @@ using qrcodegen::QrCode;
 PairingDialog::PairingDialog(const PairingOffer& offer, QWidget* parent)
     : QDialog(parent)
 {
-    setWindowTitle("Parear dispositivo — DevLink");
+    setWindowTitle("Parear dispositivo — Iriseus");
     setFixedSize(320, 420);
 
     auto* layout = new QVBoxLayout(this);

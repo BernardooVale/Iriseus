@@ -21,7 +21,7 @@ std::wstring AdbManager::adbDir()
 {
     wchar_t path[MAX_PATH];
     SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, path);
-    return std::wstring(path) + L"\\DevLink\\adb";
+    return std::wstring(path) + L"\\Iriseus\\adb";
 }
 
 std::wstring AdbManager::adbExe()

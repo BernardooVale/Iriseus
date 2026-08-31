@@ -9,7 +9,7 @@
 #include <chrono>
 #include <thread>
 
-static constexpr const char* kServiceType = "_devlink._tcp.local.";
+static constexpr const char* kServiceType = "_iriseus._tcp.local.";
 
 MdnsService::MdnsService(std::string deviceName, uint16_t wsPort)
     : m_deviceName(std::move(deviceName))
@@ -74,7 +74,7 @@ void MdnsService::runLoop()
     // Monta records para announce/resposta
     mdns_record_t records[4];
 
-    // PTR: _devlink._tcp.local. → <instance>._devlink._tcp.local.
+    // PTR: _iriseus._tcp.local. → <instance>._iriseus._tcp.local.
     records[0].name     = {kServiceType, strlen(kServiceType)};
     records[0].type     = MDNS_RECORDTYPE_PTR;
     records[0].data.ptr.name = {serviceInst.c_str(), serviceInst.size()};

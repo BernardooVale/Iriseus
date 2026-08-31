@@ -29,8 +29,8 @@ public:
     void setOnDeviceAttached(OnDeviceAttached cb) { m_onAttached = std::move(cb); }
     void setOnDeviceDetached(OnDeviceDetached cb) { m_onDetached = std::move(cb); }
 
-    static std::wstring adbDir();   // %LOCALAPPDATA%\DevLink\adb
-    static std::wstring adbExe();   // %LOCALAPPDATA%\DevLink\adb\adb.exe
+    static std::wstring adbDir();   // %LOCALAPPDATA%\Iriseus\adb
+    static std::wstring adbExe();   // %LOCALAPPDATA%\Iriseus\adb\adb.exe
 
 private:
     bool extractAdb();              // copia binários do recurso Qt para disco

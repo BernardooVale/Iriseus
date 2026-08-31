@@ -3,7 +3,7 @@
 #include <thread>
 #include <atomic>
 
-// Anuncia "_devlink._tcp.local" via mDNS para descoberta pelo app Android
+// Anuncia "_iriseus._tcp.local" via mDNS para descoberta pelo app Android
 
 class MdnsService
 {

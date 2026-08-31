@@ -5,7 +5,7 @@
 
 using json = nlohmann::json;
 
-// Tipos de mensagem do protocolo de controle DevLink
+// Tipos de mensagem do protocolo de controle Iriseus
 enum class MsgType {
     // Android → PC
     Hello,        // {"type":"hello","deviceName":"...","deviceId":"..."}

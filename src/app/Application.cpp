@@ -42,7 +42,7 @@ bool Application::init()
     m_adb->setOnDeviceAttached([this](const AdbDevice& dev) {
         QMetaObject::invokeMethod(qApp, [this, dev] {
             qDebug() << "USB conectado:" << dev.serial.c_str();
-            m_tray->showNotification("DevLink",
+            m_tray->showNotification("Iriseus",
                 "Celular conectado via USB: " + QString::fromStdString(dev.serial));
         }, Qt::QueuedConnection);
     });

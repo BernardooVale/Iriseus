@@ -57,7 +57,7 @@ void WsSession::handleMessage(const std::string& raw)
         // Responde com Welcome
         json reply = {
             {"type",       "welcome"},
-            {"deviceName", "DevLink PC"},
+            {"deviceName", "Iriseus PC"},
             {"deviceId",   "pc-placeholder-id"}
         };
         send(reply.dump());

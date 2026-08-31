@@ -160,7 +160,7 @@ USB: ADB reverse (Android) — detectado automaticamente pelo app Windows
 ### Por que não WebRTC para o streaming
 
 WebRTC seria o ideal em cenários peer-to-peer com NAT traversal, múltiplos peers ou
-clientes browser. No caso do DevLink, os dispositivos estão sempre na mesma rede local
+clientes browser. No caso do Iriseus, os dispositivos estão sempre na mesma rede local
 ou conectados via USB — NAT traversal, STUN/TURN e signaling server são overhead
 desnecessário.
 
@@ -177,7 +177,7 @@ Windows: socket TCP → FFmpeg (decodifica H264) → Softcam → scSendFrame()
 
 
 FFmpeg no Windows é facilmente bundlável (LGPL, binários pré-compilados disponíveis).
-Latência comparável ao WebRTC em rede local. Se no futuro o DevLink precisar de relay
+Latência comparável ao WebRTC em rede local. Se no futuro o Iriseus precisar de relay
 por internet ou suporte a browser, WebRTC pode ser introduzido sem quebrar a arquitetura
 — o canal de controle WebSocket já seria o signaling.
 
@@ -217,7 +217,7 @@ scCamera cam = scCreateCamera(1280, 720, 30);
 scSendFrame(cam, frameBuffer);
 ```
 
-Licença MIT. Compatível com Zoom, Teams, Meet, OBS, Discord. O installer do DevLink
+Licença MIT. Compatível com Zoom, Teams, Meet, OBS, Discord. O installer do Iriseus
 registra a DLL silenciosamente via `regsvr32` — transparente para o usuário.
 
 ### Por que o app Windows não pode ser Flutter
@@ -236,7 +236,7 @@ de status e configurações.
 ### Descoberta automática de dispositivos
 
 ```
-App Windows sobe serviço mDNS anunciando "_devlink._tcp.local"
+App Windows sobe serviço mDNS anunciando "_Iriseus._tcp.local"
 App Android faz scan mDNS e lista dispositivos encontrados
 Usuário seleciona o PC na lista — sem digitar IP
 Pareamento via QR Code ou PIN de 6 dígitos — único, salvo para reconexões futuras
@@ -256,10 +256,10 @@ AdbWinUsbApi.dll
 
 
 Licença Apache 2.0 — redistribuição permitida. Extraídos para
-`%LOCALAPPDATA%\DevLink\adb\` na instalação. O app sempre chama `adb.exe` por path
+`%LOCALAPPDATA%\Iriseus\adb\` na instalação. O app sempre chama `adb.exe` por path
 absoluto, nunca pelo PATH do sistema.
 
-Para evitar conflito com um servidor ADB já em execução no sistema do usuário, o DevLink
+Para evitar conflito com um servidor ADB já em execução no sistema do usuário, o Iriseus
 usa uma porta customizada:
 
 ```cpp
@@ -267,7 +267,7 @@ SetEnvironmentVariable(L"ANDROID_ADB_SERVER_PORT", L"5038");
 // chama adb.exe reverse, start-server etc. via path absoluto
 ```
 
-Isso isola completamente o servidor ADB do DevLink do servidor ADB do usuário.
+Isso isola completamente o servidor ADB do Iriseus do servidor ADB do usuário.
 
 **Fluxo de detecção USB:**
 
@@ -298,7 +298,7 @@ Identidades salvas — reconexões futuras são automáticas e autenticadas
 **Ataque hipotético ao QR:**
 
 Em redes compartilhadas, um atacante poderia subir um serviço mDNS falso anunciando
-`_devlink._tcp.local` antes do PC legítimo, fazer o app Android listar o dispositivo
+`_iriseus._tcp.local` antes do PC legítimo, fazer o app Android listar o dispositivo
 falso, e induzir o usuário a escanear um QR malicioso — pareando com o atacante.
 
 Na prática, o ataque exige: atacante na mesma rede local, e usuário escaneando QR
@@ -319,7 +319,7 @@ segurança da rede.
 
 ## Diferenças fundamentais em relação ao WebcamStream atual
 
-| | WebcamStream (atual) | DevLink (objetivo) |
+| | WebcamStream (atual) | Iriseus (objetivo) |
 |---|---|---|
 | Dependências externas | OBS + nginx + Python + ADB | Nenhuma visível ao usuário |
 | Configuração | Manual (IP, nginx.conf, OBS) | Zero — QR Code uma vez |
