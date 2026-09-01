@@ -21,6 +21,7 @@ struct SessionCallbacks {
     std::function<void(uint64_t sessionId)> onStopCamera;
     std::function<void(uint64_t sessionId)> onDisconnect;
     std::function<void(uint64_t sessionId, const json& payload)> onPairRequest;
+    std::function<std::string()> getPcPublicKey;
 };
 
 class WsSession : public std::enable_shared_from_this<WsSession>

@@ -13,21 +13,23 @@ using json = nlohmann::json;
 
 PairingManager::PairingManager(uint16_t wsPort)
     : m_wsPort(wsPort)
-{}
+{
+    // Gera par de chaves permanente — reutilizado até próximo pareamento
+    m_activeKeyPair = m_crypto.generateKeyPair();
+    m_currentOffer.pubKeyB64 = PairingCrypto::toBase64(
+        m_activeKeyPair.pub.data(), m_activeKeyPair.pub.size());
+}
 
 PairingOffer PairingManager::createOffer()
 {
-    m_activeKeyPair = m_crypto.generateKeyPair();
-    m_activePin     = generatePin();
-
-    PairingOffer offer;
-    offer.pcIp      = getLocalIp();
-    offer.wsPort    = m_wsPort;
-    offer.pin       = m_activePin;
-    offer.pubKeyB64 = PairingCrypto::toBase64(
+    m_currentOffer.pcIp      = getLocalIp();
+    m_currentOffer.wsPort    = m_wsPort;
+    m_currentOffer.pin       = generatePin();
+    m_activePin = m_currentOffer.pin;
+    m_currentOffer.pubKeyB64 = PairingCrypto::toBase64(
         m_activeKeyPair.pub.data(), m_activeKeyPair.pub.size());
-    offer.localKeyPair = m_activeKeyPair;
-    return offer;
+    m_currentOffer.localKeyPair = m_activeKeyPair;
+    return m_currentOffer;
 }
 
 bool PairingManager::handlePairRequest(const std::string& pin,

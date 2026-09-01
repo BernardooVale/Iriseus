@@ -104,6 +104,11 @@ void Application::setupServerCallbacks()
         json reply = {{"type", ok ? "pair_accepted" : "pair_rejected"}};
         m_wsServer->sendTo(sessionId, reply.dump());
     };
+    cb.getPcPublicKey = [this]() -> std::string {
+        if (!m_pairing) return "";
+        auto offer = m_pairing->currentOffer();
+        return offer.pubKeyB64;
+    };
 
     m_wsServer->setCallbacks(std::move(cb));
 }

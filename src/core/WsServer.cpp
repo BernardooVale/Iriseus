@@ -78,6 +78,9 @@ void WsServer::doAccept()
                     if (m_callbacks.onPairRequest)
                         m_callbacks.onPairRequest(sid, payload);
                 };
+                scb.getPcPublicKey = [this]() -> std::string {
+                    return m_callbacks.getPcPublicKey ? m_callbacks.getPcPublicKey() : "";
+                };
 
                 auto session = std::make_shared<WsSession>(
                     std::move(socket), id, std::move(scb));

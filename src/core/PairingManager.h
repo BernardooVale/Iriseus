@@ -29,6 +29,7 @@ public:
 
     // Gera nova oferta de pareamento (novo QR / PIN)
     PairingOffer createOffer();
+    const PairingOffer& currentOffer() const { return m_currentOffer; }
 
     // Chamado pelo WsSession ao receber mensagem "pair_request"
     // Retorna true se PIN válido e completa o pareamento
@@ -54,5 +55,6 @@ private:
     std::unordered_map<std::string, PairedDevice> m_devices;
     std::string                                 m_activePin;
     KeyPair                                     m_activeKeyPair;
+    PairingOffer                                m_currentOffer;
     OnPaired                                    m_onPaired;
 };

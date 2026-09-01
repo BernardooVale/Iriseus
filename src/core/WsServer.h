@@ -19,6 +19,7 @@ struct ServerCallbacks {
     std::function<void(uint64_t sessionId)> onStartCamera;
     std::function<void(uint64_t sessionId)> onStopCamera;
     std::function<void(uint64_t sessionId, const json& payload)> onPairRequest;
+    std::function<std::string()> getPcPublicKey;
 };
 
 class WsServer

@@ -58,7 +58,8 @@ void WsSession::handleMessage(const std::string& raw)
         json reply = {
             {"type",       "welcome"},
             {"deviceName", "Iriseus PC"},
-            {"deviceId",   "pc-placeholder-id"}
+            {"deviceId",   "pc-placeholder-id"},
+            {"pk",         m_callbacks.getPcPublicKey ? m_callbacks.getPcPublicKey() : ""}
         };
         send(reply.dump());
         break;
