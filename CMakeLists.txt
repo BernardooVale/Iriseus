@@ -41,6 +41,77 @@ target_include_directories(qrcodegen PUBLIC ${qrcodegen_SOURCE_DIR}/cpp)
 
 set(LIBSODIUM_LIB "${LIBSODIUM_ROOT}/x64/Release/v143/static/libsodium.lib")
 
+set(FFMPEG_ROOT "C:/local/ffmpeg" CACHE PATH "FFmpeg root")
+find_path(FFMPEG_INCLUDE_DIR libavcodec/avcodec.h PATHS "${FFMPEG_ROOT}/include")
+find_library(FFMPEG_AVCODEC NAMES avcodec PATHS "${FFMPEG_ROOT}/lib")
+find_library(FFMPEG_AVUTIL  NAMES avutil  PATHS "${FFMPEG_ROOT}/lib")
+find_library(FFMPEG_SWSCALE NAMES swscale PATHS "${FFMPEG_ROOT}/lib")
+
+# BaseClasses — DirectShow base
+add_library(baseclasses STATIC
+    third_party/softcam/src/baseclasses/amfilter.cpp
+    third_party/softcam/src/baseclasses/amvideo.cpp
+    third_party/softcam/src/baseclasses/combase.cpp
+    third_party/softcam/src/baseclasses/dllentry.cpp
+    third_party/softcam/src/baseclasses/dllsetup.cpp
+    third_party/softcam/src/baseclasses/mtype.cpp
+    third_party/softcam/src/baseclasses/source.cpp
+    third_party/softcam/src/baseclasses/winutil.cpp
+    third_party/softcam/src/baseclasses/wxdebug.cpp
+    third_party/softcam/src/baseclasses/wxlist.cpp
+    third_party/softcam/src/baseclasses/wxutil.cpp
+)
+target_include_directories(baseclasses PUBLIC
+    third_party/softcam/src/baseclasses
+)
+target_compile_definitions(baseclasses PRIVATE
+    UNICODE
+    _UNICODE
+)
+target_compile_options(baseclasses PRIVATE 
+    /Zc:strictStrings-
+)
+target_link_libraries(baseclasses PUBLIC
+    strmiids winmm ole32 oleaut32 uuid
+)
+
+# SoftcamSender — apenas SenderAPI, sem DShowSoftcam
+add_library(softcamsender STATIC
+    third_party/softcam/src/softcamcore/FrameBuffer.cpp
+    third_party/softcam/src/softcamcore/Misc.cpp
+    third_party/softcam/src/softcamcore/SenderAPI.cpp
+    third_party/softcam/src/softcamcore/Watchdog.cpp
+)
+target_include_directories(softcamsender PUBLIC
+    third_party/softcam/src/softcamcore
+    third_party/softcam/src/baseclasses
+    third_party/softcam/src/softcam
+    third_party/softcam/src
+)
+
+target_link_libraries(softcamsender PUBLIC
+    baseclasses
+    kernel32 user32
+)
+
+# Softcam DLL — registrada via regsvr32
+add_library(softcam MODULE
+    third_party/softcam/src/softcam/softcam.cpp
+    third_party/softcam/src/softcam/softcam.def
+    third_party/softcam/src/softcamcore/DShowSoftcam.cpp
+)
+target_include_directories(softcam PRIVATE
+    third_party/softcam/src/softcam
+    third_party/softcam/src/softcamcore
+    third_party/softcam/src/baseclasses
+    third_party/softcam/src
+)
+target_link_libraries(softcam PRIVATE
+    softcamsender
+    baseclasses
+)
+set_target_properties(softcam PROPERTIES SUFFIX ".dll")
+
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
 
 set(SOURCES
@@ -54,6 +125,9 @@ set(SOURCES
     src/core/PairingCrypto.cpp
     src/ui/PairingDialog.cpp
     src/core/AdbManager.cpp
+    src/core/StreamReceiver.cpp
+    src/core/VideoDecoder.cpp
+    src/core/VirtualCamera.cpp
     resources/resources.qrc
 )
 
@@ -64,6 +138,9 @@ target_include_directories(Iriseus PRIVATE
     ${Boost_INCLUDE_DIRS}
     ${mdns_SOURCE_DIR}
     ${LIBSODIUM_ROOT}/include
+    ${FFMPEG_INCLUDE_DIR}
+    third_party/softcam/src/softcam
+    third_party/softcam/src/softcamcore
 )
 
 target_link_libraries(Iriseus PRIVATE
@@ -78,12 +155,17 @@ target_link_libraries(Iriseus PRIVATE
     nlohmann_json::nlohmann_json
     qrcodegen
     ${LIBSODIUM_LIB}
+    ${FFMPEG_AVCODEC}
+    ${FFMPEG_AVUTIL}
+    ${FFMPEG_SWSCALE}
 )
 
 set_target_properties(Iriseus PROPERTIES
     WIN32_EXECUTABLE TRUE
     VS_DPI_AWARE "PerMonitor"
 )
+
+target_link_options(Iriseus PRIVATE /NODEFAULTLIB:LIBCMT)
 
 find_program(WINDEPLOYQT windeployqt HINTS "${Qt6_DIR}/../../../bin")
 if(WINDEPLOYQT)
@@ -96,3 +178,20 @@ if(WINDEPLOYQT)
         COMMENT "Running windeployqt"
     )
 endif()
+
+add_custom_command(TARGET Iriseus POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:softcam>"
+        "$<TARGET_FILE_DIR:Iriseus>/softcam.dll"
+    COMMENT "Copying softcam.dll"
+)
+
+add_custom_command(TARGET Iriseus POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FFMPEG_ROOT}/bin/avcodec-63.dll"
+        "${FFMPEG_ROOT}/bin/avutil-61.dll"
+        "${FFMPEG_ROOT}/bin/swscale-10.dll"
+        "${FFMPEG_ROOT}/bin/swresample-7.dll"
+        "$<TARGET_FILE_DIR:Iriseus>"
+    COMMENT "Copying FFmpeg DLLs"
+)

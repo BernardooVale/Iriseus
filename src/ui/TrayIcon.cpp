@@ -94,6 +94,16 @@ void TrayIcon::showNotification(const QString& title, const QString& message)
     m_tray->showMessage(title, message, QSystemTrayIcon::Information, 3000);
 }
 
+void TrayIcon::updateCameraStatus(bool active)
+{
+    updateIcon(active);
+    m_actionStartCamera->setVisible(!active);
+    m_actionStopCamera->setVisible(active);
+    m_tray->showMessage("Iriseus",
+        active ? "Câmera ativa" : "Câmera desconectada",
+        QSystemTrayIcon::Information, 2000);
+}
+
 void TrayIcon::onPairDevice()
 {
     emit pairRequested();

@@ -1,13 +1,14 @@
 #include <QApplication>
+#include <QMessageBox>
 #include "app/Application.h"
 
 int main(int argc, char* argv[])
 {
-    // Systray exige QApplication, não QCoreApplication
     QApplication qt(argc, argv);
-    qt.setQuitOnLastWindowClosed(false); // app vive no systray, não em janelas
+    qt.setQuitOnLastWindowClosed(false);
 
     Application app;
+
     if (!app.init()) {
         return 1;
     }

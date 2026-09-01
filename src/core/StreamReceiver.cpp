@@ -1,0 +1,100 @@
+#include "StreamReceiver.h"
+#include "VideoDecoder.h"
+#include "VirtualCamera.h"
+#include <QDebug>
+
+StreamReceiver::StreamReceiver(uint16_t port, int width, int height, float fps)
+    : m_port(port)
+    , m_width(width)
+    , m_height(height)
+    , m_fps(fps)
+    , m_acceptor(m_ioc)
+{}
+
+StreamReceiver::~StreamReceiver()
+{
+    stop();
+}
+
+bool StreamReceiver::start()
+{
+    m_decoder = std::make_unique<VideoDecoder>();
+    if (!m_decoder->init(m_width, m_height)) return false;
+
+    m_camera = std::make_unique<VirtualCamera>();
+    if (!m_camera->open(m_width, m_height, m_fps)) return false;
+
+    m_decoder->setOnFrame([this](const uint8_t* rgb, int w, int h) {
+        m_camera->sendFrame(rgb, w, h);
+    });
+
+    try {
+        tcp::endpoint ep(tcp::v4(), m_port);
+        m_acceptor.open(ep.protocol());
+        m_acceptor.set_option(asio::socket_base::reuse_address(true));
+        m_acceptor.bind(ep);
+        m_acceptor.listen();
+    } catch (const std::exception& e) {
+        qWarning() << "StreamReceiver: bind falhou —" << e.what();
+        return false;
+    }
+
+    m_running = true;
+    m_thread  = std::thread(&StreamReceiver::acceptLoop, this);
+    return true;
+}
+
+void StreamReceiver::stop()
+{
+    if (!m_running.exchange(false)) return;
+    m_ioc.stop();
+    if (m_thread.joinable()) m_thread.join();
+    if (m_camera) m_camera->close();
+}
+
+void StreamReceiver::acceptLoop()
+{
+    while (m_running) {
+        boost::system::error_code ec;
+        tcp::socket socket(m_ioc);
+        m_acceptor.accept(socket, ec);
+        if (ec) break;
+
+        if (m_onStatus) m_onStatus(true);
+        receiveLoop(std::move(socket));
+        if (m_onStatus) m_onStatus(false);
+    }
+}
+
+void StreamReceiver::receiveLoop(tcp::socket socket)
+{
+    // Framing: 4 bytes big-endian → tamanho do NALU seguinte
+    while (m_running) {
+        uint8_t lenBuf[4];
+        if (!readExact(socket, lenBuf, 4)) break;
+
+        uint32_t naluSize = (uint32_t(lenBuf[0]) << 24) |
+                            (uint32_t(lenBuf[1]) << 16) |
+                            (uint32_t(lenBuf[2]) <<  8) |
+                             uint32_t(lenBuf[3]);
+
+        if (naluSize == 0 || naluSize > 4 * 1024 * 1024) break; // sanidade
+
+        std::vector<uint8_t> nalu(naluSize);
+        if (!readExact(socket, nalu.data(), naluSize)) break;
+
+        m_decoder->pushNalu(nalu.data(), naluSize);
+    }
+}
+
+bool StreamReceiver::readExact(tcp::socket& socket, uint8_t* buf, size_t size)
+{
+    size_t total = 0;
+    while (total < size) {
+        boost::system::error_code ec;
+        size_t n = socket.read_some(asio::buffer(buf + total, size - total), ec);
+        if (ec || n == 0) return false;
+        total += n;
+    }
+    return true;
+}

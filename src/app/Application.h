@@ -7,6 +7,7 @@ class MdnsService;
 class PairingManager;
 class PairingDialog;
 class AdbManager;
+class StreamReceiver;
 
 class Application
 {
@@ -25,4 +26,5 @@ private:
     std::unique_ptr<PairingManager> m_pairing;
     PairingDialog*                  m_pairingDialog = nullptr;
     std::unique_ptr<AdbManager>     m_adb;
+    std::unique_ptr<StreamReceiver> m_stream;
 };

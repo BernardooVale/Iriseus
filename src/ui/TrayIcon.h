@@ -14,6 +14,7 @@ public:
 
     void show();
     void showNotification(const QString& title, const QString& message);
+    void updateCameraStatus(bool active);
 
 signals:
     void pairRequested();

@@ -7,6 +7,7 @@
 #include <QApplication>
 #include <QDebug>
 #include "core/AdbManager.h"
+#include "core/StreamReceiver.h"
 
 Application::Application() = default;
 Application::~Application() = default;
@@ -52,6 +53,17 @@ bool Application::init()
         }, Qt::QueuedConnection);
     });
     m_adb->start();
+
+    m_stream = std::make_unique<StreamReceiver>(45679, 1280, 720, 30.0f);
+    if (!m_stream->start()) {
+        qWarning() << "StreamReceiver: falha ao iniciar — Softcam registrado?";
+        // não fatal — app sobe sem câmera virtual até Softcam ser registrado
+    }
+    m_stream->setOnStatusChange([this](bool active) {
+        QMetaObject::invokeMethod(qApp, [this, active] {
+            m_tray->updateCameraStatus(active);
+        }, Qt::QueuedConnection);
+    });
 
     m_tray = std::make_unique<TrayIcon>();
     m_tray->show();
