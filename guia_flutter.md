@@ -8,7 +8,7 @@ em um novo contexto. Leia tudo antes de começar.
 ## Contexto
 
 O app Windows já está implementado e funcional. Ele:
-- Anuncia `_devlink._tcp.local` via mDNS
+- Anuncia `_iriseus._tcp.local` via mDNS
 - Aceita conexões WebSocket na porta `45678`
 - Aceita stream H264 via socket TCP na porta `45679`
 - Implementa pareamento ECDH X25519 + TOFU via QR Code ou PIN
@@ -112,7 +112,7 @@ Formato: JSON, texto
 ```json
 {
   "type": "welcome",
-  "deviceName": "DevLink PC",
+  "deviceName": "Iriseus PC",
   "deviceId": "pc-placeholder-id"
 }
 ```
@@ -217,13 +217,13 @@ Se `deviceId` do PC já está salvo em `shared_preferences`:
 
 ## Descoberta mDNS
 
-O PC anuncia `_devlink._tcp.local` na rede.
+O PC anuncia `_iriseus._tcp.local` na rede.
 
 No Android, usar o pacote `nsd` (Network Service Discovery nativo do Android via
 platform channel) ou `multicast_dns` (dart puro).
 
 **Dados esperados no registro mDNS:**
-- Service type: `_devlink._tcp`
+- Service type: `_iriseus._tcp`
 - TXT record: `version=1`
 - SRV record: hostname + porta `45678`
 

@@ -1,7 +1,7 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
   <qresource prefix="/icons">
-    <!-- Adicionar devlink.ico e devlink_active.ico aqui depois -->
+    <!-- Adicionar iriseus.ico e iriseus_active.ico aqui depois -->
   </qresource>
   <qresource prefix="/adb">
     <file>adb/adb.exe</file>

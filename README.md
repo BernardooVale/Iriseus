@@ -20,7 +20,7 @@ A solução anterior (WebcamStream) resolvia o problema mas exigia OBS + nginx +
 
 - Systray com menu (iniciar/parar câmera, parear dispositivo, sair)
 - Servidor WebSocket na porta `45678` — canal de controle
-- Descoberta de rede via mDNS (`_devlink._tcp.local`)
+- Descoberta de rede via mDNS (`_iriseus._tcp.local`)
 - Pareamento via QR Code + PIN de 6 dígitos (ECDH X25519 + TOFU)
 - Modo USB via ADB bundlado, porta isolada `5038`, `adb reverse` automático
 - Pipeline de câmera: socket TCP porta `45679` → FFmpeg H264 decode → RGB24 → Softcam → DirectShow
