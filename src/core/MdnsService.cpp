@@ -22,17 +22,28 @@ static uint32_t getLocalIp()
     struct addrinfo hints{}, *res = nullptr;
     hints.ai_family = AF_INET;
     if (getaddrinfo(hostname, nullptr, &hints, &res) != 0) return 0;
-    uint32_t ip = 0;
+
+    uint32_t fallback = 0;
+    uint32_t preferred = 0;
+
     for (auto* p = res; p; p = p->ai_next) {
         auto* s = reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
-        uint32_t candidate = s->sin_addr.s_addr;
+        uint32_t ip = ntohl(s->sin_addr.s_addr);
+
         // pular loopback
-        if ((ntohl(candidate) >> 24) == 127) continue;
-        ip = candidate;
-        break;
+        if ((ip >> 24) == 127) continue;
+
+        // preferir redes locais: 192.168.x.x, 10.x.x.x, 172.16-31.x.x
+        bool isLocal = ((ip >> 24) == 10) ||
+                       ((ip >> 24) == 192 && ((ip >> 16) & 0xFF) == 168) ||
+                       ((ip >> 24) == 172 && ((ip >> 16) & 0xFF) >= 16 && ((ip >> 16) & 0xFF) <= 31);
+
+        if (isLocal && preferred == 0) preferred = htonl(ip);
+        if (!isLocal && fallback == 0) fallback = htonl(ip);
     }
+
     freeaddrinfo(res);
-    return ip;
+    return preferred != 0 ? preferred : fallback;
 }
 
 struct ServiceContext {
