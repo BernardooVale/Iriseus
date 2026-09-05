@@ -75,6 +75,13 @@ bool Application::init()
         m_pairingDialog = nullptr;
     });
 
+    QObject::connect(qApp, &QApplication::aboutToQuit, qApp, [this] {
+        m_stream->stop();
+        m_adb->stop();
+        m_mdns->stop();
+        m_wsServer->stop();
+    });
+
     return true;
 }
 

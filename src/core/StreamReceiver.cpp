@@ -47,6 +47,8 @@ bool StreamReceiver::start()
 void StreamReceiver::stop()
 {
     if (!m_running.exchange(false)) return;
+    boost::system::error_code ec;
+    m_acceptor.close(ec);   // desbloqueia accept() bloqueado
     m_ioc.stop();
     if (m_thread.joinable()) m_thread.join();
     if (m_camera) m_camera->close();
