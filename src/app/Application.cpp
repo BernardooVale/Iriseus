@@ -57,7 +57,7 @@ bool Application::init()
     m_adb->start();
     qDebug() << "AdbManager: start() concluído";
 
-    m_stream = std::make_unique<StreamReceiver>(45679, 1280, 720, 30.0f);
+    m_stream = std::make_unique<StreamReceiver>(45679, 0, 0, 30.0f);
     if (!m_stream->start()) {
         qWarning() << "StreamReceiver: falha ao iniciar — Softcam registrado?";
         // não fatal — app sobe sem câmera virtual até Softcam ser registrado

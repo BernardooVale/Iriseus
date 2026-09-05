@@ -35,6 +35,7 @@ private:
 
     int m_width  = 0;
     int m_height = 0;
+    int m_lastFormat = -1;
 
     std::vector<uint8_t> m_rgbBuffer;
     OnFrame              m_onFrame;

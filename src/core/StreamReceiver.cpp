@@ -19,12 +19,22 @@ StreamReceiver::~StreamReceiver()
 bool StreamReceiver::start()
 {
     m_decoder = std::make_unique<VideoDecoder>();
-    if (!m_decoder->init(m_width, m_height)) return false;
+    if (!m_decoder->init(0, 0)) return false;
 
     m_camera = std::make_unique<VirtualCamera>();
-    if (!m_camera->open(m_width, m_height, m_fps)) return false;
 
     m_decoder->setOnFrame([this](const uint8_t* rgb, int w, int h) {
+        if (w != m_width || h != m_height) {
+            qDebug() << "StreamReceiver: abrindo câmera" << w << "x" << h;
+            m_width  = w;
+            m_height = h;
+            if (m_camera) m_camera->close();
+            m_camera = std::make_unique<VirtualCamera>();
+            if (!m_camera->open(w, h, m_fps)) {
+                qWarning() << "StreamReceiver: falha ao abrir VirtualCamera";
+                return;
+            }
+        }
         m_camera->sendFrame(rgb, w, h);
     });
 
@@ -82,8 +92,6 @@ void StreamReceiver::receiveLoop(tcp::socket socket)
                             (uint32_t(lenBuf[2]) <<  8) |
                              uint32_t(lenBuf[3]);
 
-        qDebug() << "StreamReceiver: NALU recebido, tamanho=" << naluSize;
-
         if (naluSize == 0 || naluSize > 4 * 1024 * 1024) {
             qDebug() << "StreamReceiver: NALU inválido, abortando";
             break;
@@ -93,7 +101,6 @@ void StreamReceiver::receiveLoop(tcp::socket socket)
         if (!readExact(socket, nalu.data(), naluSize)) break;
 
         m_decoder->pushNalu(nalu.data(), naluSize);
-        qDebug() << "StreamReceiver: frame" << ++frameCount << "enviado ao decoder";
     }
 }
 bool StreamReceiver::readExact(tcp::socket& socket, uint8_t* buf, size_t size)
