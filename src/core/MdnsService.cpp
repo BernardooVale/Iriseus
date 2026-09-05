@@ -4,22 +4,127 @@
 #include "MdnsService.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <iphlpapi.h>
 #include <array>
 #include <string>
 #include <chrono>
 #include <thread>
 
+#pragma comment(lib, "iphlpapi.lib")
+
 static constexpr const char* kServiceType = "_iriseus._tcp.local.";
+
+// Obtém primeiro IP IPv4 não-loopback da máquina
+static uint32_t getLocalIp()
+{
+    char hostname[256];
+    gethostname(hostname, sizeof(hostname));
+    struct addrinfo hints{}, *res = nullptr;
+    hints.ai_family = AF_INET;
+    if (getaddrinfo(hostname, nullptr, &hints, &res) != 0) return 0;
+    uint32_t ip = 0;
+    for (auto* p = res; p; p = p->ai_next) {
+        auto* s = reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
+        uint32_t candidate = s->sin_addr.s_addr;
+        // pular loopback
+        if ((ntohl(candidate) >> 24) == 127) continue;
+        ip = candidate;
+        break;
+    }
+    freeaddrinfo(res);
+    return ip;
+}
+
+struct ServiceContext {
+    std::string serviceInst;
+    std::string hostname;
+    std::string txtRecord;
+    uint16_t    port;
+    uint32_t    localIp;
+};
+
+static int mdnsCallback(int sock, const struct sockaddr* from, size_t addrlen,
+                        mdns_entry_type_t entry, uint16_t query_id,
+                        uint16_t rtype, uint16_t rclass, uint32_t ttl,
+                        const void* data, size_t size, size_t name_offset,
+                        size_t name_length, size_t record_offset,
+                        size_t record_length, void* user_data)
+{
+    // Só responde queries (não announcements ou answers de outros)
+    if (entry != MDNS_ENTRYTYPE_QUESTION) return 0;
+
+    auto* ctx = static_cast<ServiceContext*>(user_data);
+    std::array<char, 2048> buffer;
+
+    mdns_record_t answer{};
+    mdns_record_t additional[3];
+    int nadditional = 0;
+
+    if (rtype == MDNS_RECORDTYPE_PTR) {
+        // Responde PTR com SRV + TXT + A como additional
+        answer.name              = {kServiceType, strlen(kServiceType)};
+        answer.type              = MDNS_RECORDTYPE_PTR;
+        answer.data.ptr.name     = {ctx->serviceInst.c_str(), ctx->serviceInst.size()};
+        answer.ttl               = 120;
+
+        additional[0].name             = {ctx->serviceInst.c_str(), ctx->serviceInst.size()};
+        additional[0].type             = MDNS_RECORDTYPE_SRV;
+        additional[0].data.srv.name    = {ctx->hostname.c_str(), ctx->hostname.size()};
+        additional[0].data.srv.port    = ctx->port;
+        additional[0].data.srv.priority = 0;
+        additional[0].data.srv.weight  = 0;
+        additional[0].ttl              = 120;
+
+        additional[1].name             = {ctx->serviceInst.c_str(), ctx->serviceInst.size()};
+        additional[1].type             = MDNS_RECORDTYPE_TXT;
+        additional[1].data.txt.key     = {"version", 7};
+        additional[1].data.txt.value   = {"1", 1};
+        additional[1].ttl              = 120;
+
+        additional[2].name                        = {ctx->hostname.c_str(), ctx->hostname.size()};
+        additional[2].type                        = MDNS_RECORDTYPE_A;
+        additional[2].data.a.addr.sin_family      = AF_INET;
+        additional[2].data.a.addr.sin_addr.s_addr = ctx->localIp; // IP real
+        additional[2].ttl                         = 120;
+
+        nadditional = 3;
+
+        mdns_query_answer_multicast(sock, buffer.data(), buffer.size(),
+                                    answer, nullptr, 0,
+                                    additional, nadditional);
+    }
+    else if (rtype == MDNS_RECORDTYPE_SRV) {
+        answer.name             = {ctx->serviceInst.c_str(), ctx->serviceInst.size()};
+        answer.type             = MDNS_RECORDTYPE_SRV;
+        answer.data.srv.name    = {ctx->hostname.c_str(), ctx->hostname.size()};
+        answer.data.srv.port    = ctx->port;
+        answer.data.srv.priority = 0;
+        answer.data.srv.weight  = 0;
+        answer.ttl              = 120;
+
+        mdns_query_answer_multicast(sock, buffer.data(), buffer.size(),
+                                    answer, nullptr, 0, nullptr, 0);
+    }
+    else if (rtype == MDNS_RECORDTYPE_A) {
+        answer.name                        = {ctx->hostname.c_str(), ctx->hostname.size()};
+        answer.type                        = MDNS_RECORDTYPE_A;
+        answer.data.a.addr.sin_family      = AF_INET;
+        answer.data.a.addr.sin_addr.s_addr = ctx->localIp;
+        answer.ttl                         = 120;
+
+        mdns_query_answer_multicast(sock, buffer.data(), buffer.size(),
+                                    answer, nullptr, 0, nullptr, 0);
+    }
+
+    return 0;
+}
 
 MdnsService::MdnsService(std::string deviceName, uint16_t wsPort)
     : m_deviceName(std::move(deviceName))
     , m_wsPort(wsPort)
 {}
 
-MdnsService::~MdnsService()
-{
-    stop();
-}
+MdnsService::~MdnsService() { stop(); }
 
 bool MdnsService::start()
 {
@@ -34,28 +139,11 @@ void MdnsService::stop()
     if (m_thread.joinable()) m_thread.join();
 }
 
-// Callback obrigatório para mdns_listen — ignora queries recebidas,
-// a resposta é feita via mdns_query_answer_multicast dentro do loop
-static int mdnsCallback(int sock, const struct sockaddr* from, size_t addrlen,
-                        mdns_entry_type_t entry, uint16_t query_id,
-                        uint16_t rtype, uint16_t rclass, uint32_t ttl,
-                        const void* data, size_t size, size_t name_offset,
-                        size_t name_length, size_t record_offset,
-                        size_t record_length, void* user_data)
-{
-    // Não processa queries recebidas nessa implementação simplificada
-    (void)sock; (void)from; (void)addrlen; (void)entry; (void)query_id;
-    (void)rtype; (void)rclass; (void)ttl; (void)data; (void)size;
-    (void)name_offset; (void)name_length; (void)record_offset;
-    (void)record_length; (void)user_data;
-    return 0;
-}
-
 void MdnsService::runLoop()
 {
-    using namespace std::chrono_literals;
+    uint32_t localIp = getLocalIp();
+    if (localIp == 0) return;
 
-    // Socket de serviço — bind na porta 5353
     struct sockaddr_in saddr{};
     saddr.sin_family      = AF_INET;
     saddr.sin_addr.s_addr = INADDR_ANY;
@@ -64,56 +152,45 @@ void MdnsService::runLoop()
     int sock = mdns_socket_open_ipv4(&saddr);
     if (sock < 0) return;
 
-    std::array<char, 2048> buffer;
-
-    // Nomes DNS
     std::string hostname    = m_deviceName + ".local.";
     std::string serviceInst = m_deviceName + "." + kServiceType;
-    std::string txtRecord   = "version=1";
 
-    // Monta records para announce/resposta
-    mdns_record_t records[4];
+    ServiceContext ctx{serviceInst, hostname, "version=1", m_wsPort, localIp};
 
-    // PTR: _iriseus._tcp.local. → <instance>._iriseus._tcp.local.
-    records[0].name     = {kServiceType, strlen(kServiceType)};
-    records[0].type     = MDNS_RECORDTYPE_PTR;
-    records[0].data.ptr.name = {serviceInst.c_str(), serviceInst.size()};
-    records[0].rclass   = 0;
-    records[0].ttl      = 120;
+    std::array<char, 2048> buffer;
 
-    // SRV: <instance> → hostname:port
-    records[1].name     = {serviceInst.c_str(), serviceInst.size()};
-    records[1].type     = MDNS_RECORDTYPE_SRV;
-    records[1].data.srv.name     = {hostname.c_str(), hostname.size()};
-    records[1].data.srv.port     = m_wsPort;
-    records[1].data.srv.priority = 0;
-    records[1].data.srv.weight   = 0;
-    records[1].rclass  = 0;
-    records[1].ttl     = 120;
+    // Monta records com IP real
+    mdns_record_t ptr{};
+    ptr.name             = {kServiceType, strlen(kServiceType)};
+    ptr.type             = MDNS_RECORDTYPE_PTR;
+    ptr.data.ptr.name    = {serviceInst.c_str(), serviceInst.size()};
+    ptr.ttl              = 120;
 
-    // TXT
-    mdns_record_txt_t txt{};
-    txt.key   = {"version", 7};
-    txt.value = {"1", 1};
-    records[2].name     = {serviceInst.c_str(), serviceInst.size()};
-    records[2].type     = MDNS_RECORDTYPE_TXT;
-    records[2].data.txt.key   = {"version", 7};
-    records[2].data.txt.value = {"1", 1};
-    records[2].rclass   = 0;
-    records[2].ttl      = 120;
+    mdns_record_t additional[3];
 
-    // A: hostname → IP (mdns.h resolve automaticamente ao enviar)
-    records[3].name   = {hostname.c_str(), hostname.size()};
-    records[3].type   = MDNS_RECORDTYPE_A;
-    records[3].data.a.addr.sin_family      = AF_INET;
-    records[3].data.a.addr.sin_addr.s_addr = 0; // 0 = usa IP local automaticamente
-    records[3].rclass = 0;
-    records[3].ttl    = 120;
+    additional[0].name             = {serviceInst.c_str(), serviceInst.size()};
+    additional[0].type             = MDNS_RECORDTYPE_SRV;
+    additional[0].data.srv.name    = {hostname.c_str(), hostname.size()};
+    additional[0].data.srv.port    = m_wsPort;
+    additional[0].data.srv.priority = 0;
+    additional[0].data.srv.weight  = 0;
+    additional[0].ttl              = 120;
+
+    additional[1].name             = {serviceInst.c_str(), serviceInst.size()};
+    additional[1].type             = MDNS_RECORDTYPE_TXT;
+    additional[1].data.txt.key     = {"version", 7};
+    additional[1].data.txt.value   = {"1", 1};
+    additional[1].ttl              = 120;
+
+    additional[2].name                        = {hostname.c_str(), hostname.size()};
+    additional[2].type                        = MDNS_RECORDTYPE_A;
+    additional[2].data.a.addr.sin_family      = AF_INET;
+    additional[2].data.a.addr.sin_addr.s_addr = localIp; // IP real
+    additional[2].ttl                         = 120;
 
     // Announce inicial
     mdns_announce_multicast(sock, buffer.data(), buffer.size(),
-                            records[0], nullptr, 0,
-                            records + 1, 3);
+                            ptr, nullptr, 0, additional, 3);
 
     // Loop: escuta e responde queries
     while (m_running) {
@@ -125,17 +202,16 @@ void MdnsService::runLoop()
         int ready = select(sock + 1, &readfds, nullptr, nullptr, &tv);
         if (ready <= 0) continue;
 
-        mdns_socket_listen(sock, buffer.data(), buffer.size(), mdnsCallback, nullptr);
+        mdns_socket_listen(sock, buffer.data(), buffer.size(), mdnsCallback, &ctx);
     }
 
-    // Goodbye — TTL=0
-    records[0].ttl = 0;
-    records[1].ttl = 0;
-    records[2].ttl = 0;
-    records[3].ttl = 0;
+    // Goodbye
+    ptr.ttl          = 0;
+    additional[0].ttl = 0;
+    additional[1].ttl = 0;
+    additional[2].ttl = 0;
     mdns_goodbye_multicast(sock, buffer.data(), buffer.size(),
-                       records[0], nullptr, 0,
-                       records + 1, 3);
+                           ptr, nullptr, 0, additional, 3);
 
     mdns_socket_close(sock);
 }
