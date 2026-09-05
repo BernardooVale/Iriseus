@@ -36,6 +36,7 @@ bool Application::init()
     });
 
     m_adb = std::make_unique<AdbManager>(45678, 45679); // 45679 = porta stream TCP futura
+    qDebug() << "AdbManager: iniciando init()";
     if (!m_adb->init()) {
         qWarning() << "AdbManager: falha na inicialização";
         // não fatal — modo WiFi ainda funciona
@@ -52,7 +53,9 @@ bool Application::init()
             qDebug() << "USB desconectado:" << serial.c_str();
         }, Qt::QueuedConnection);
     });
+    qDebug() << "AdbManager: init() concluído, iniciando start()";
     m_adb->start();
+    qDebug() << "AdbManager: start() concluído";
 
     m_stream = std::make_unique<StreamReceiver>(45679, 1280, 720, 30.0f);
     if (!m_stream->start()) {

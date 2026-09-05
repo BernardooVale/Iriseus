@@ -4,8 +4,9 @@
     <!-- Adicionar iriseus.ico e iriseus_active.ico aqui depois -->
   </qresource>
   <qresource prefix="/adb">
-    <file>adb/adb.exe</file>
-    <file>adb/AdbWinApi.dll</file>
-    <file>adb/AdbWinUsbApi.dll</file>
+    <!-- <file>adb/adb.exe</file> -->
+    <file alias="adb.exe">adb/adb.exe</file>
+    <file alias="AdbWinApi.dll">adb/AdbWinApi.dll</file>
+    <file alias="AdbWinUsbApi.dll">adb/AdbWinUsbApi.dll</file>
   </qresource>
 </RCC>

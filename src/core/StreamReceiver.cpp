@@ -62,15 +62,17 @@ void StreamReceiver::acceptLoop()
         m_acceptor.accept(socket, ec);
         if (ec) break;
 
+        qDebug() << "StreamReceiver: cliente conectado";
         if (m_onStatus) m_onStatus(true);
         receiveLoop(std::move(socket));
+        qDebug() << "StreamReceiver: cliente desconectado";
         if (m_onStatus) m_onStatus(false);
     }
 }
 
 void StreamReceiver::receiveLoop(tcp::socket socket)
 {
-    // Framing: 4 bytes big-endian → tamanho do NALU seguinte
+    int frameCount = 0;
     while (m_running) {
         uint8_t lenBuf[4];
         if (!readExact(socket, lenBuf, 4)) break;
@@ -80,15 +82,20 @@ void StreamReceiver::receiveLoop(tcp::socket socket)
                             (uint32_t(lenBuf[2]) <<  8) |
                              uint32_t(lenBuf[3]);
 
-        if (naluSize == 0 || naluSize > 4 * 1024 * 1024) break; // sanidade
+        qDebug() << "StreamReceiver: NALU recebido, tamanho=" << naluSize;
+
+        if (naluSize == 0 || naluSize > 4 * 1024 * 1024) {
+            qDebug() << "StreamReceiver: NALU inválido, abortando";
+            break;
+        }
 
         std::vector<uint8_t> nalu(naluSize);
         if (!readExact(socket, nalu.data(), naluSize)) break;
 
         m_decoder->pushNalu(nalu.data(), naluSize);
+        qDebug() << "StreamReceiver: frame" << ++frameCount << "enviado ao decoder";
     }
 }
-
 bool StreamReceiver::readExact(tcp::socket& socket, uint8_t* buf, size_t size)
 {
     size_t total = 0;

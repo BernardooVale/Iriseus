@@ -4,14 +4,15 @@
 
 int main(int argc, char* argv[])
 {
-    QApplication qt(argc, argv);
-    qt.setQuitOnLastWindowClosed(false);
+    QApplication app(argc, argv);
+    app.setQuitOnLastWindowClosed(false);
 
-    Application app;
+    qInstallMessageHandler([](QtMsgType, const QMessageLogContext&, const QString& msg) {
+        fprintf(stderr, "%s\n", msg.toLocal8Bit().constData());
+        fflush(stderr);
+    });
 
-    if (!app.init()) {
-        return 1;
-    }
-
-    return qt.exec();
+    Application iriseus;
+    iriseus.init();
+    return app.exec();
 }

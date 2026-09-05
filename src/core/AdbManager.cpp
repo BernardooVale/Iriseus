@@ -15,7 +15,7 @@
 // adb.exe, AdbWinApi.dll, AdbWinUsbApi.dll
 // Adicionados ao resources.qrc como arquivos binários
 
-static constexpr const char* kAdbServerPort = "5038";
+static constexpr const char* kAdbServerPort = "5037";
 
 std::wstring AdbManager::adbDir()
 {
@@ -97,13 +97,14 @@ bool AdbManager::startAdbServer()
 
 bool AdbManager::setupReverse(const std::string& serial)
 {
-    // adb -s <serial> reverse tcp:<wsPort> tcp:<wsPort>
     auto ws  = std::to_string(m_wsPort);
     auto str = std::to_string(m_streamPort);
 
-    runAdb({"-s", serial, "reverse", "tcp:" + ws,  "tcp:" + ws});
-    runAdb({"-s", serial, "reverse", "tcp:" + str, "tcp:" + str});
+    auto out1 = runAdb({"-s", serial, "reverse", "tcp:" + ws,  "tcp:" + ws});
+    auto out2 = runAdb({"-s", serial, "reverse", "tcp:" + str, "tcp:" + str});
 
+    qDebug() << "AdbManager reverse ws:" << out1.c_str();
+    qDebug() << "AdbManager reverse stream:" << out2.c_str();
     qDebug() << "AdbManager: reverse configurado para" << serial.c_str();
     return true;
 }
