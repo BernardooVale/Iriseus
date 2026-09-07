@@ -10,7 +10,14 @@ Plataforma de comunicação local entre dispositivos — celular ou computador �
 
 Necessidade de usar o celular como webcam em entrevistas técnicas em empresas grandes, que exigem câmera ligada durante provas online. O PC não possui câmera integrada.
 
-A solução anterior (WebcamStream) resolvia o problema mas exigia OBS + nginx + Python + ADB instalados e configurados manualmente. O Iriseus elimina todas essas dependências.
+---
+
+## Repositórios
+
+| Componente | Repositório |
+|---|---|
+| App Windows (este) | repositório atual |
+| App Android (Flutter) | https://github.com/BernardooVale/Iriseus-Mobile |
 
 ---
 
@@ -20,15 +27,21 @@ A solução anterior (WebcamStream) resolvia o problema mas exigia OBS + nginx +
 
 - Systray com menu (iniciar/parar câmera, parear dispositivo, sair)
 - Servidor WebSocket na porta `45678` — canal de controle
-- Descoberta de rede via mDNS (`_iriseus._tcp.local`)
+- Descoberta de rede via mDNS (`_devlink._tcp.local`)
 - Pareamento via QR Code + PIN de 6 dígitos (ECDH X25519 + TOFU)
 - Modo USB via ADB bundlado, porta isolada `5038`, `adb reverse` automático
 - Pipeline de câmera: socket TCP porta `45679` → FFmpeg H264 decode → RGB24 → Softcam → DirectShow
-- Webcam virtual via Softcam (DirectShow filter, MIT)
+- Webcam virtual via Softcam (DirectShow filter, MIT) carregado via LoadLibrary em runtime
 
-### App Android — pendente
+### App Android — implementado
 
-### Fases 2–3 — pendentes
+Repositório: https://github.com/BernardooVale/Iriseus-Mobile
+
+- WebSocket client — canal de controle
+- Pareamento via QR Code + PIN (ECDH X25519 + TOFU)
+- Descoberta de dispositivos via mDNS
+- Pipeline de câmera: CameraX → MediaCodec H264 → socket TCP
+- Modo USB — detecção automática via `127.0.0.1`
 
 ---
 
@@ -63,18 +76,17 @@ A solução anterior (WebcamStream) resolvia o problema mas exigia OBS + nginx +
 
 | Componente | Tecnologia |
 |---|---|
-| App mobile | Flutter (Android hoje, iOS futuro) |
+| App mobile | Flutter (Android hoje) |
 | App desktop | C++ nativo + Qt 6 (systray) |
 | Build system | CMake 3.24+ |
 | WebSocket | Boost.Beast + Boost.Asio |
 | JSON | nlohmann/json |
-| mDNS | mjansson/mdns |
+| mDNS | mjansson/mdns (single-header C) |
 | QR Code | nayuki/QR-Code-generator |
-| Criptografia | libsodium (X25519 ECDH) |
-| Decodificação H264 | FFmpeg (BtbN shared build) |
-| Webcam virtual | Softcam (DirectShow, MIT) |
-| Descoberta | mDNS — `nsd` Android, `mdns.h` Windows |
-| USB | ADB bundlado, isolado, transparente |
+| Criptografia | libsodium 1.0.22 (X25519 ECDH, estático) |
+| Decodificação H264 | FFmpeg BtbN shared build |
+| Webcam virtual | Softcam (DirectShow, MIT) via LoadLibrary |
+| USB | ADB bundlado, isolado, porta 5038 |
 
 ---
 
@@ -105,6 +117,7 @@ A solução anterior (WebcamStream) resolvia o problema mas exigia OBS + nginx +
 ### 6. FFmpeg (BtbN shared build)
 - Download: https://github.com/BtbN/FFmpeg-Builds/releases → `ffmpeg-master-latest-win64-gpl-shared.zip`
 - Extrair em: `C:\local\ffmpeg`
+- DLLs copiadas automaticamente pelo CMake para a pasta do exe
 
 ### 7. ADB platform-tools
 - Download: https://developer.android.com/studio/releases/platform-tools
@@ -121,25 +134,21 @@ git submodule update --init
 ## Build
 
 ```powershell
-# Configurar (ajuste o path do Qt e o generator conforme sua versão do VS)
+# VS 2026
 & "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" `
     -B build -G "Visual Studio 18 2026" -A x64 `
     -DCMAKE_PREFIX_PATH="C:/Qt/6.11.1/msvc2022_64"
 
+# VS 2022
+& "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" `
+    -B build -G "Visual Studio 17 2022" -A x64 `
+    -DCMAKE_PREFIX_PATH="C:/Qt/6.11.1/msvc2022_64"
+
 # Compilar
-& "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" `
-    --build build --config Release
+& "<path-do-cmake>" --build build --config Release
 ```
 
-**Nota:** Se estiver usando VS 2022, substituir `Visual Studio 18 2026` por `Visual Studio 17 2022`.
-
-### Cache de dependências
-
-Para evitar re-download do FetchContent ao recriar a pasta `build/`, o cache é mantido em `C:\local\cmake_deps`. Pode ser adicionado ao `.gitignore`:
-
-```
-build/
-```
+**Cache FetchContent:** mantido em `C:\local\cmake_deps` — não é apagado ao deletar `build/`.
 
 ---
 
@@ -160,9 +169,10 @@ Após isso, "Softcam" aparece como câmera disponível no Meet, Zoom, Teams e Di
 1. ✅ Protocolo base — mDNS + WebSocket + pareamento QR/PIN
 2. ✅ Streaming de câmera + Softcam — H264 via socket TCP, scSendFrame()
 3. ✅ Modo USB — ADB bundlado, porta isolada, adb reverse automático
-4. 🔲 App Flutter Android
+4. ✅ App Flutter Android
 5. 🔲 Installer (NSIS) — registra Softcam, copia DLLs, entrada no Startup
 6. 🔲 Transferência de arquivos
-7. 🔲 Microfone virtual
-8. 🔲 Área de transferência, notificações
-9. 🔲 Compartilhamento de tela
+7. 🔲 UI completa — janela abrindo ao duplo clique no systray
+8. 🔲 Microfone virtual
+9. 🔲 Área de transferência, notificações
+10. 🔲 Compartilhamento de tela
