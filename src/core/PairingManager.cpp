@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <QDebug>
 
 using json = nlohmann::json;
 
@@ -37,13 +38,28 @@ bool PairingManager::handlePairRequest(const std::string& pin,
                                         const std::string& deviceId,
                                         const std::string& deviceName)
 {
+    qDebug() << "PairingManager: tentativa de pareamento recebida"
+             << "pin=" << QString::fromStdString(pin)
+             << "activePin=" << QString::fromStdString(m_activePin);
+
     // Valida PIN com comparação em tempo constante
-    if (pin.size() != m_activePin.size()) return false;
-    if (sodium_memcmp(pin.data(), m_activePin.data(), pin.size()) != 0)
+    if (pin.size() != m_activePin.size()) {
+        qWarning() << "PairingManager: tamanho do PIN diferente. Recebido:"
+                   << pin.size() << "Esperado:" << m_activePin.size();
         return false;
+    }
+    if (sodium_memcmp(pin.data(), m_activePin.data(), pin.size()) != 0) {
+        qWarning() << "PairingManager: PIN incorreto. Recebido:"
+                   << QString::fromStdString(pin)
+                   << "Esperado:" << QString::fromStdString(m_activePin);
+        return false;
+    }
 
     auto peerPubVec = PairingCrypto::fromBase64(peerPubKeyB64);
-    if (peerPubVec.size() != 32) return false;
+    if (peerPubVec.size() != 32) {
+        qWarning() << "PairingManager: chave pública peer com tamanho inválido:" << peerPubVec.size();
+        return false;
+    }
 
     std::array<uint8_t, 32> peerPub;
     std::copy(peerPubVec.begin(), peerPubVec.end(), peerPub.begin());
@@ -58,6 +74,8 @@ bool PairingManager::handlePairRequest(const std::string& pin,
 
     // Invalida PIN após uso — TOFU
     m_activePin.clear();
+
+    qDebug() << "PairingManager: dispositivo pareado com sucesso!" << QString::fromStdString(deviceName);
 
     if (m_onPaired) m_onPaired(device);
     return true;
@@ -115,4 +133,14 @@ std::string PairingManager::getLocalIp()
         freeaddrinfo(res);
     }
     return ip;
+}
+
+void PairingManager::restoreDevice(const std::string& deviceId, const std::string& deviceName)
+{
+    PairedDevice device;
+    device.deviceId   = deviceId;
+    device.deviceName = deviceName;
+    // Sem chave criptográfica restaurada — handshake normal acontece na reconexão
+    m_devices[deviceId] = device;
+    qDebug() << "PairingManager: dispositivo restaurado" << deviceId.c_str();
 }

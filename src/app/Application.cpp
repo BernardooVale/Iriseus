@@ -1,11 +1,11 @@
 #include "Application.h"
 #include "ui/TrayIcon.h"
 #include "core/WsServer.h"
-#include "core/MdnsService.h"
 #include "core/PairingManager.h"
 #include "ui/PairingDialog.h"
 #include <QApplication>
 #include <QDebug>
+#include <QSettings>
 #include "core/AdbManager.h"
 #include "core/StreamReceiver.h"
 
@@ -22,11 +22,13 @@ bool Application::init()
         return false;
     }
 
-    m_mdns = std::make_unique<MdnsService>("iriseus-pc", 45678);
-    m_mdns->start();
-
     m_pairing = std::make_unique<PairingManager>(45678);
     m_pairing->setOnPaired([this](const PairedDevice& device) {
+        // Persiste dispositivo pareado
+        QSettings settings("Iriseus", "Iriseus");
+        settings.setValue("pairedDeviceId",   QString::fromStdString(device.deviceId));
+        settings.setValue("pairedDeviceName", QString::fromStdString(device.deviceName));
+
         QMetaObject::invokeMethod(qApp, [this, device] {
             if (m_pairingDialog) {
                 m_pairingDialog->onPairingComplete(
@@ -35,11 +37,18 @@ bool Application::init()
         }, Qt::QueuedConnection);
     });
 
-    m_adb = std::make_unique<AdbManager>(45678, 45679); // 45679 = porta stream TCP futura
+    // Restaura dispositivo pareado anterior (se houver)
+    QSettings settings("Iriseus", "Iriseus");
+    auto savedId   = settings.value("pairedDeviceId").toString().toStdString();
+    auto savedName = settings.value("pairedDeviceName").toString().toStdString();
+    if (!savedId.empty()) {
+        m_pairing->restoreDevice(savedId, savedName);
+    }
+
+    m_adb = std::make_unique<AdbManager>(45678, 45679);
     qDebug() << "AdbManager: iniciando init()";
     if (!m_adb->init()) {
         qWarning() << "AdbManager: falha na inicialização";
-        // não fatal — modo WiFi ainda funciona
     }
     m_adb->setOnDeviceAttached([this](const AdbDevice& dev) {
         QMetaObject::invokeMethod(qApp, [this, dev] {
@@ -60,7 +69,6 @@ bool Application::init()
     m_stream = std::make_unique<StreamReceiver>(45679, 0, 0, 30.0f);
     if (!m_stream->start()) {
         qWarning() << "StreamReceiver: falha ao iniciar — Softcam registrado?";
-        // não fatal — app sobe sem câmera virtual até Softcam ser registrado
     }
     m_stream->setOnStatusChange([this](bool active) {
         QMetaObject::invokeMethod(qApp, [this, active] {
@@ -81,7 +89,6 @@ bool Application::init()
     QObject::connect(qApp, &QApplication::aboutToQuit, qApp, [this] {
         m_stream->stop();
         m_adb->stop();
-        m_mdns->stop();
         m_wsServer->stop();
     });
 

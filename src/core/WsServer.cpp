@@ -21,7 +21,9 @@ bool WsServer::start()
     try {
         tcp::endpoint endpoint(tcp::v4(), m_port);
         m_acceptor.open(endpoint.protocol());
+#ifndef _WIN32
         m_acceptor.set_option(asio::socket_base::reuse_address(true));
+#endif
         m_acceptor.bind(endpoint);
         m_acceptor.listen();
     } catch (const std::exception& e) {

@@ -2,6 +2,15 @@
 #include "VideoDecoder.h"
 #include "VirtualCamera.h"
 #include <QDebug>
+#include <mutex>
+#include <condition_variable>
+#include <deque>
+
+// Fila de NALUs entre thread de rede e thread de decode
+static std::mutex              s_queueMutex;
+static std::condition_variable s_queueCv;
+static std::deque<std::vector<uint8_t>> s_naluQueue;
+static constexpr size_t kMaxQueueDepth = 120;
 
 StreamReceiver::StreamReceiver(uint16_t port, int width, int height, float fps)
     : m_port(port)
@@ -42,6 +51,8 @@ bool StreamReceiver::start()
         tcp::endpoint ep(tcp::v4(), m_port);
         m_acceptor.open(ep.protocol());
         m_acceptor.set_option(asio::socket_base::reuse_address(true));
+        // Buffer de recepção maior para absorver rajadas de frames
+        m_acceptor.set_option(asio::socket_base::receive_buffer_size(1 * 1024 * 1024));
         m_acceptor.bind(ep);
         m_acceptor.listen();
     } catch (const std::exception& e) {
@@ -50,7 +61,8 @@ bool StreamReceiver::start()
     }
 
     m_running = true;
-    m_thread  = std::thread(&StreamReceiver::acceptLoop, this);
+    m_netThread    = std::thread(&StreamReceiver::acceptLoop, this);
+    m_decodeThread = std::thread(&StreamReceiver::decodeLoop, this);
     return true;
 }
 
@@ -58,9 +70,16 @@ void StreamReceiver::stop()
 {
     if (!m_running.exchange(false)) return;
     boost::system::error_code ec;
-    m_acceptor.close(ec);   // desbloqueia accept() bloqueado
+    m_acceptor.close(ec);
     m_ioc.stop();
-    if (m_thread.joinable()) m_thread.join();
+    // Acorda a thread de decode para sair
+    {
+        std::lock_guard<std::mutex> lk(s_queueMutex);
+        s_naluQueue.clear();
+    }
+    s_queueCv.notify_all();
+    if (m_netThread.joinable())    m_netThread.join();
+    if (m_decodeThread.joinable()) m_decodeThread.join();
     if (m_camera) m_camera->close();
 }
 
@@ -72,6 +91,9 @@ void StreamReceiver::acceptLoop()
         m_acceptor.accept(socket, ec);
         if (ec) break;
 
+        // Aumenta buffer de recv do socket conectado
+        socket.set_option(asio::socket_base::receive_buffer_size(512 * 1024));
+
         qDebug() << "StreamReceiver: cliente conectado";
         if (m_onStatus) m_onStatus(true);
         receiveLoop(std::move(socket));
@@ -82,7 +104,6 @@ void StreamReceiver::acceptLoop()
 
 void StreamReceiver::receiveLoop(tcp::socket socket)
 {
-    int frameCount = 0;
     while (m_running) {
         uint8_t lenBuf[4];
         if (!readExact(socket, lenBuf, 4)) break;
@@ -100,9 +121,34 @@ void StreamReceiver::receiveLoop(tcp::socket socket)
         std::vector<uint8_t> nalu(naluSize);
         if (!readExact(socket, nalu.data(), naluSize)) break;
 
-        m_decoder->pushNalu(nalu.data(), naluSize);
+        // Enfileira para decode thread
+        {
+            std::lock_guard<std::mutex> lk(s_queueMutex);
+            if (s_naluQueue.size() >= kMaxQueueDepth) {
+                // Fila excessivamente acumulada (ex: app minimizado) — limpa para ressincronizar
+                s_naluQueue.clear();
+            }
+            s_naluQueue.push_back(std::move(nalu));
+            s_queueCv.notify_one();
+        }
     }
 }
+
+void StreamReceiver::decodeLoop()
+{
+    while (m_running) {
+        std::vector<uint8_t> nalu;
+        {
+            std::unique_lock<std::mutex> lk(s_queueMutex);
+            s_queueCv.wait(lk, [this]{ return !s_naluQueue.empty() || !m_running; });
+            if (!m_running && s_naluQueue.empty()) break;
+            nalu = std::move(s_naluQueue.front());
+            s_naluQueue.pop_front();
+        }
+        m_decoder->pushNalu(nalu.data(), nalu.size());
+    }
+}
+
 bool StreamReceiver::readExact(tcp::socket& socket, uint8_t* buf, size_t size)
 {
     size_t total = 0;

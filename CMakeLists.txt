@@ -24,21 +24,6 @@ FetchContent_Declare(json
 )
 FetchContent_MakeAvailable(json)
 
-FetchContent_Declare(mdns
-    URL https://github.com/mjansson/mdns/archive/refs/heads/master.zip
-)
-FetchContent_MakeAvailable(mdns)
-
-FetchContent_Declare(qrcodegen
-    URL https://github.com/nayuki/QR-Code-generator/archive/refs/heads/master.zip
-)
-FetchContent_MakeAvailable(qrcodegen)
-
-add_library(qrcodegen STATIC
-    ${qrcodegen_SOURCE_DIR}/cpp/qrcodegen.cpp
-)
-target_include_directories(qrcodegen PUBLIC ${qrcodegen_SOURCE_DIR}/cpp)
-
 set(LIBSODIUM_LIB "${LIBSODIUM_ROOT}/x64/Release/v143/static/libsodium.lib")
 
 set(FFMPEG_ROOT "C:/local/ffmpeg" CACHE PATH "FFmpeg root")
@@ -120,7 +105,6 @@ set(SOURCES
     src/ui/TrayIcon.cpp
     src/core/WsServer.cpp
     src/core/WsSession.cpp
-    src/core/MdnsService.cpp
     src/core/PairingManager.cpp
     src/core/PairingCrypto.cpp
     src/ui/PairingDialog.cpp
@@ -136,7 +120,6 @@ add_executable(Iriseus WIN32 ${SOURCES})
 target_include_directories(Iriseus PRIVATE
     src
     ${Boost_INCLUDE_DIRS}
-    ${mdns_SOURCE_DIR}
     ${LIBSODIUM_ROOT}/include
     ${FFMPEG_INCLUDE_DIR}
     third_party/softcam/src/softcam
@@ -153,7 +136,6 @@ target_link_libraries(Iriseus PRIVATE
     wsock32
     iphlpapi
     nlohmann_json::nlohmann_json
-    qrcodegen
     ${LIBSODIUM_LIB}
     ${FFMPEG_AVCODEC}
     ${FFMPEG_AVUTIL}

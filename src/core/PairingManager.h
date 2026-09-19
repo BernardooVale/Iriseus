@@ -43,6 +43,9 @@ public:
 
     void setOnPaired(OnPaired cb) { m_onPaired = std::move(cb); }
 
+    // Restaura dispositivo previamente pareado (persistido em QSettings)
+    void restoreDevice(const std::string& deviceId, const std::string& deviceName);
+
     // QR payload — JSON serializado para encode no QRCode
     static std::string buildQrPayload(const PairingOffer& offer);
 

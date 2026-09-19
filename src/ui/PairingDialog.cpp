@@ -1,46 +1,35 @@
 #include "PairingDialog.h"
-#include "core/PairingManager.h"
 #include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QPixmap>
-#include <QImage>
-#include <QPainter>
+#include <QLabel>
+#include <QPushButton>
 #include <QFont>
-#include "qrcodegen.hpp"
 #include <QTimer>
-
-using qrcodegen::QrCode;
 
 PairingDialog::PairingDialog(const PairingOffer& offer, QWidget* parent)
     : QDialog(parent)
 {
     setWindowTitle("Parear dispositivo — Iriseus");
-    setFixedSize(320, 420);
+    setFixedSize(280, 260);
 
     auto* layout = new QVBoxLayout(this);
     layout->setAlignment(Qt::AlignCenter);
-    layout->setSpacing(12);
+    layout->setSpacing(16);
+    layout->setContentsMargins(24, 24, 24, 24);
 
-    // QR Code
-    m_qrLabel = new QLabel(this);
-    m_qrLabel->setAlignment(Qt::AlignCenter);
-    buildQrPixmap(PairingManager::buildQrPayload(offer));
-    layout->addWidget(m_qrLabel);
+    // Instrução
+    auto* instrLabel = new QLabel("Abra o Iriseus no celular e\ndigite o código abaixo:", this);
+    instrLabel->setAlignment(Qt::AlignCenter);
+    instrLabel->setWordWrap(true);
+    layout->addWidget(instrLabel);
 
-    // PIN
-    auto* pinTitle = new QLabel("ou use o PIN:", this);
-    pinTitle->setAlignment(Qt::AlignCenter);
-    layout->addWidget(pinTitle);
-
-    m_pinLabel = new QLabel(QString::fromStdString(offer.pin), this);
+    // PIN em destaque
+    m_pinLabel = new QLabel(formatPin(offer.pin), this);
     QFont pinFont = m_pinLabel->font();
-    pinFont.setPointSize(28);
+    pinFont.setPointSize(36);
     pinFont.setBold(true);
+    pinFont.setLetterSpacing(QFont::AbsoluteSpacing, 8);
     m_pinLabel->setFont(pinFont);
     m_pinLabel->setAlignment(Qt::AlignCenter);
-    QFont pinFontSpaced = m_pinLabel->font();
-    pinFontSpaced.setLetterSpacing(QFont::AbsoluteSpacing, 6);
-    m_pinLabel->setFont(pinFontSpaced);
     layout->addWidget(m_pinLabel);
 
     // Status
@@ -58,32 +47,14 @@ void PairingDialog::onPairingComplete(const QString& deviceName)
 {
     m_statusLabel->setText("✓ Pareado com " + deviceName);
     m_cancelBtn->setText("Fechar");
-    m_qrLabel->setEnabled(false);
     m_pinLabel->setEnabled(false);
-
-    // Fecha automaticamente após 2s
     QTimer::singleShot(2000, this, &QDialog::accept);
 }
 
-void PairingDialog::buildQrPixmap(const std::string& payload)
+QString PairingDialog::formatPin(const std::string& pin)
 {
-    auto qr = QrCode::encodeText(payload.c_str(), QrCode::Ecc::MEDIUM);
-
-    int scale   = 6;
-    int modules = qr.getSize();
-    int imgSize = modules * scale;
-
-    QImage img(imgSize, imgSize, QImage::Format_RGB32);
-    img.fill(Qt::white);
-
-    QPainter painter(&img);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(Qt::black);
-
-    for (int y = 0; y < modules; ++y)
-        for (int x = 0; x < modules; ++x)
-            if (qr.getModule(x, y))
-                painter.drawRect(x * scale, y * scale, scale, scale);
-
-    m_qrLabel->setPixmap(QPixmap::fromImage(img));
+    // Formata como "123 456" para facilitar leitura
+    if (pin.size() == 6)
+        return QString::fromStdString(pin.substr(0, 3) + " " + pin.substr(3, 3));
+    return QString::fromStdString(pin);
 }
