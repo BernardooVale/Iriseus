@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 #include <functional>
+#include <deque>
+#include <mutex>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <nlohmann/json.hpp>
 
@@ -21,6 +23,11 @@ struct SessionCallbacks {
     std::function<void(uint64_t sessionId)> onStopCamera;
     std::function<void(uint64_t sessionId)> onDisconnect;
     std::function<void(uint64_t sessionId, const json& payload)> onPairRequest;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileOffer;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileAccept;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileReject;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileComplete;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileCancel;
     std::function<std::string()> getPcPublicKey;
 };
 
@@ -40,11 +47,14 @@ public:
 private:
     void doRead();
     void onRead(beast::error_code ec, std::size_t bytesRead);
-    void doWrite(const std::string& message);
+    void doWrite();
     void handleMessage(const std::string& raw);
 
     ws::stream<beast::tcp_stream> m_ws;
     beast::flat_buffer            m_buffer;
     uint64_t                      m_id;
     SessionCallbacks              m_callbacks;
+
+    std::mutex                    m_writeMutex;
+    std::deque<std::string>       m_writeQueue;
 };

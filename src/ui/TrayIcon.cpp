@@ -38,6 +38,8 @@ void TrayIcon::buildMenu()
     m_actionStartCamera = m_menu->addAction("Iniciar câmera");
     m_actionStopCamera  = m_menu->addAction("Parar câmera");
     m_actionPair        = m_menu->addAction("Parear novo dispositivo...");
+    QAction* actionSendFile      = m_menu->addAction("Enviar arquivos para o celular...");
+    QAction* actionOpenDownloads = m_menu->addAction("Abrir pasta de recebidos");
     m_actionStopCamera->setVisible(false);
 
     m_menu->addSeparator();
@@ -47,6 +49,8 @@ void TrayIcon::buildMenu()
     connect(m_actionStopCamera,     &QAction::triggered, this, &TrayIcon::onStopCamera);
     connect(actionQuit,             &QAction::triggered, this, &TrayIcon::onQuit);
     connect(m_actionPair,           &QAction::triggered, this, &TrayIcon::onPairDevice);
+    connect(actionSendFile,         &QAction::triggered, this, [this]{ emit sendFilesRequested(); });
+    connect(actionOpenDownloads,    &QAction::triggered, this, [this]{ emit openDownloadsRequested(); });
 }
 
 void TrayIcon::updateIcon(bool active)

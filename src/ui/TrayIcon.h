@@ -18,6 +18,8 @@ public:
 
 signals:
     void pairRequested();
+    void openDownloadsRequested();
+    void sendFilesRequested();
 
 private slots:
     void onActivated(QSystemTrayIcon::ActivationReason reason);

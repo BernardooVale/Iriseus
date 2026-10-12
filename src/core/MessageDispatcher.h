@@ -22,6 +22,14 @@ enum class MsgType {
     PairAccepted,
     PairRejected,
 
+    // Transferência de arquivos
+    FileOffer,
+    FileAccept,
+    FileReject,
+    FileReady,
+    FileComplete,
+    FileCancel,
+
     Unknown
 };
 
@@ -32,16 +40,22 @@ struct ControlMessage {
 
 inline MsgType msgTypeFromString(const std::string& s)
 {
-    if (s == "hello")        return MsgType::Hello;
-    if (s == "start_camera") return MsgType::StartCamera;
-    if (s == "stop_camera")  return MsgType::StopCamera;
-    if (s == "ping")         return MsgType::Ping;
+    if (s == "hello")         return MsgType::Hello;
+    if (s == "start_camera")  return MsgType::StartCamera;
+    if (s == "stop_camera")   return MsgType::StopCamera;
+    if (s == "ping")          return MsgType::Ping;
     if (s == "pair_request")  return MsgType::PairRequest;
     if (s == "pair_accepted") return MsgType::PairAccepted;
     if (s == "pair_rejected") return MsgType::PairRejected;
-    if (s == "welcome")      return MsgType::Welcome;
-    if (s == "pong")         return MsgType::Pong;
-    if (s == "error")        return MsgType::Error;
+    if (s == "file_offer")    return MsgType::FileOffer;
+    if (s == "file_accept")   return MsgType::FileAccept;
+    if (s == "file_reject")   return MsgType::FileReject;
+    if (s == "file_ready")    return MsgType::FileReady;
+    if (s == "file_complete") return MsgType::FileComplete;
+    if (s == "file_cancel")   return MsgType::FileCancel;
+    if (s == "welcome")       return MsgType::Welcome;
+    if (s == "pong")          return MsgType::Pong;
+    if (s == "error")         return MsgType::Error;
     return MsgType::Unknown;
 }
 

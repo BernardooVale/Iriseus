@@ -19,6 +19,11 @@ struct ServerCallbacks {
     std::function<void(uint64_t sessionId)> onStartCamera;
     std::function<void(uint64_t sessionId)> onStopCamera;
     std::function<void(uint64_t sessionId, const json& payload)> onPairRequest;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileOffer;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileAccept;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileReject;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileComplete;
+    std::function<void(uint64_t sessionId, const json& payload)> onFileCancel;
     std::function<std::string()> getPcPublicKey;
 };
 

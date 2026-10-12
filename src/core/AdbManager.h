@@ -19,7 +19,7 @@ public:
     using OnDeviceAttached = std::function<void(const AdbDevice&)>;
     using OnDeviceDetached = std::function<void(const std::string& serial)>;
 
-    AdbManager(uint16_t wsPort, uint16_t streamPort);
+    AdbManager(uint16_t wsPort, uint16_t streamPort, uint16_t filePort = 45680);
     ~AdbManager();
 
     bool init();   // extrai adb.exe para %LOCALAPPDATA%, inicia servidor
@@ -43,6 +43,7 @@ private:
 
     uint16_t          m_wsPort;
     uint16_t          m_streamPort;
+    uint16_t          m_filePort;
     std::thread       m_thread;
     std::atomic<bool> m_running{false};
 

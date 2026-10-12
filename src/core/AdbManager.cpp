@@ -29,9 +29,10 @@ std::wstring AdbManager::adbExe()
     return adbDir() + L"\\adb.exe";
 }
 
-AdbManager::AdbManager(uint16_t wsPort, uint16_t streamPort)
+AdbManager::AdbManager(uint16_t wsPort, uint16_t streamPort, uint16_t filePort)
     : m_wsPort(wsPort)
     , m_streamPort(streamPort)
+    , m_filePort(filePort)
 {}
 
 AdbManager::~AdbManager()
@@ -99,12 +100,15 @@ bool AdbManager::setupReverse(const std::string& serial)
 {
     auto ws  = std::to_string(m_wsPort);
     auto str = std::to_string(m_streamPort);
+    auto fl  = std::to_string(m_filePort);
 
     auto out1 = runAdb({"-s", serial, "reverse", "tcp:" + ws,  "tcp:" + ws});
     auto out2 = runAdb({"-s", serial, "reverse", "tcp:" + str, "tcp:" + str});
+    auto out3 = runAdb({"-s", serial, "reverse", "tcp:" + fl,  "tcp:" + fl});
 
     qDebug() << "AdbManager reverse ws:" << out1.c_str();
     qDebug() << "AdbManager reverse stream:" << out2.c_str();
+    qDebug() << "AdbManager reverse file:" << out3.c_str();
     qDebug() << "AdbManager: reverse configurado para" << serial.c_str();
     return true;
 }

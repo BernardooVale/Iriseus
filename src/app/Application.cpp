@@ -6,8 +6,12 @@
 #include <QApplication>
 #include <QDebug>
 #include <QSettings>
+#include <QDesktopServices>
+#include <QFileDialog>
+#include <QUrl>
 #include "core/AdbManager.h"
 #include "core/StreamReceiver.h"
+#include "core/FileTransferManager.h"
 
 Application::Application() = default;
 Application::~Application() = default;
@@ -45,7 +49,7 @@ bool Application::init()
         m_pairing->restoreDevice(savedId, savedName);
     }
 
-    m_adb = std::make_unique<AdbManager>(45678, 45679);
+    m_adb = std::make_unique<AdbManager>(45678, 45679, 45680);
     qDebug() << "AdbManager: iniciando init()";
     if (!m_adb->init()) {
         qWarning() << "AdbManager: falha na inicialização";
@@ -76,6 +80,21 @@ bool Application::init()
         }, Qt::QueuedConnection);
     });
 
+    m_fileManager = std::make_unique<Iriseus::FileTransferManager>(m_wsServer.get(), m_pairing.get());
+    if (!m_fileManager->start()) {
+        qWarning() << "FileTransferManager: falha ao iniciar servidor de arquivos na porta 45680";
+    }
+
+    QObject::connect(m_fileManager.get(), &Iriseus::FileTransferManager::transferFinished,
+                     qApp, [this](QString transferId, QString fileName, bool success, QString error) {
+        Q_UNUSED(transferId)
+        if (success) {
+            m_tray->showNotification("Iriseus", "Arquivo recebido com sucesso: " + fileName);
+        } else {
+            m_tray->showNotification("Iriseus", "Falha ao receber " + fileName + ": " + error);
+        }
+    });
+
     m_tray = std::make_unique<TrayIcon>();
     m_tray->show();
 
@@ -86,7 +105,20 @@ bool Application::init()
         m_pairingDialog = nullptr;
     });
 
+    QObject::connect(m_tray.get(), &TrayIcon::sendFilesRequested, qApp, [this] {
+        QStringList files = QFileDialog::getOpenFileNames(nullptr, "Selecionar arquivos para enviar ao celular");
+        if (!files.isEmpty() && m_fileManager) {
+            m_fileManager->sendFiles(0, files);
+        }
+    });
+
+    QObject::connect(m_tray.get(), &TrayIcon::openDownloadsRequested, qApp, [this] {
+        QString dirPath = m_fileManager->defaultDownloadDir();
+        QDesktopServices::openUrl(QUrl::fromLocalFile(dirPath));
+    });
+
     QObject::connect(qApp, &QApplication::aboutToQuit, qApp, [this] {
+        m_fileManager->stop();
         m_stream->stop();
         m_adb->stop();
         m_wsServer->stop();
@@ -99,11 +131,15 @@ void Application::setupServerCallbacks()
 {
     ServerCallbacks cb;
 
-    cb.onDeviceConnected = [](uint64_t id, const std::string& name) {
+    cb.onDeviceConnected = [this](uint64_t id, const std::string& name) {
         qDebug() << "Dispositivo conectado:" << QString::fromStdString(name) << "id=" << id;
+        if (m_fileManager) m_fileManager->setCurrentSession(id);
     };
-    cb.onDeviceDisconnected = [](uint64_t id) {
+    cb.onDeviceDisconnected = [this](uint64_t id) {
         qDebug() << "Dispositivo desconectado id=" << id;
+        if (m_fileManager && m_fileManager->currentSession() == id) {
+            m_fileManager->setCurrentSession(0);
+        }
     };
     cb.onStartCamera = [](uint64_t /*id*/) {
         qDebug() << "StartCamera solicitado";
@@ -120,6 +156,21 @@ void Application::setupServerCallbacks()
         bool ok = m_pairing->handlePairRequest(pin, peerPubB64, deviceId, deviceName);
         json reply = {{"type", ok ? "pair_accepted" : "pair_rejected"}};
         m_wsServer->sendTo(sessionId, reply.dump());
+    };
+    cb.onFileOffer = [this](uint64_t sessionId, const json& payload) {
+        if (m_fileManager) m_fileManager->handleFileOffer(sessionId, payload);
+    };
+    cb.onFileAccept = [this](uint64_t sessionId, const json& payload) {
+        if (m_fileManager) m_fileManager->handleFileAccept(sessionId, payload);
+    };
+    cb.onFileReject = [this](uint64_t sessionId, const json& payload) {
+        if (m_fileManager) m_fileManager->handleFileReject(sessionId, payload);
+    };
+    cb.onFileComplete = [this](uint64_t sessionId, const json& payload) {
+        if (m_fileManager) m_fileManager->handleFileComplete(sessionId, payload);
+    };
+    cb.onFileCancel = [this](uint64_t sessionId, const json& payload) {
+        if (m_fileManager) m_fileManager->handleFileCancel(sessionId, payload);
     };
     cb.getPcPublicKey = [this]() -> std::string {
         if (!m_pairing) return "";

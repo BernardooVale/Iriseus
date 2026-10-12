@@ -112,6 +112,8 @@ set(SOURCES
     src/core/StreamReceiver.cpp
     src/core/VideoDecoder.cpp
     src/core/VirtualCamera.cpp
+    src/core/FileTransferServer.cpp
+    src/core/FileTransferManager.cpp
     resources/resources.qrc
 )
 

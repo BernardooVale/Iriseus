@@ -84,6 +84,31 @@ void WsSession::handleMessage(const std::string& raw)
             m_callbacks.onPairRequest(m_id, msg.payload);
         break;
     }
+    case MsgType::FileOffer: {
+        if (m_callbacks.onFileOffer)
+            m_callbacks.onFileOffer(m_id, msg.payload);
+        break;
+    }
+    case MsgType::FileAccept: {
+        if (m_callbacks.onFileAccept)
+            m_callbacks.onFileAccept(m_id, msg.payload);
+        break;
+    }
+    case MsgType::FileReject: {
+        if (m_callbacks.onFileReject)
+            m_callbacks.onFileReject(m_id, msg.payload);
+        break;
+    }
+    case MsgType::FileComplete: {
+        if (m_callbacks.onFileComplete)
+            m_callbacks.onFileComplete(m_id, msg.payload);
+        break;
+    }
+    case MsgType::FileCancel: {
+        if (m_callbacks.onFileCancel)
+            m_callbacks.onFileCancel(m_id, msg.payload);
+        break;
+    }
     default:
         break;
     }
@@ -91,10 +116,42 @@ void WsSession::handleMessage(const std::string& raw)
 
 void WsSession::send(const std::string& message)
 {
-    m_ws.async_write(asio::buffer(message),
+    asio::post(m_ws.get_executor(), [self = shared_from_this(), message]() {
+        bool writeInProgress = false;
+        {
+            std::lock_guard<std::mutex> lk(self->m_writeMutex);
+            writeInProgress = !self->m_writeQueue.empty();
+            self->m_writeQueue.push_back(message);
+        }
+
+        if (!writeInProgress) {
+            self->doWrite();
+        }
+    });
+}
+
+void WsSession::doWrite()
+{
+    std::string msg;
+    {
+        std::lock_guard<std::mutex> lk(m_writeMutex);
+        if (m_writeQueue.empty()) return;
+        msg = m_writeQueue.front();
+    }
+
+    m_ws.async_write(asio::buffer(msg),
         [self = shared_from_this()](beast::error_code ec, std::size_t) {
-            // TODO: fila de escrita se necessário (por ora, mensagens são raras)
-            (void)ec;
+            if (ec) return;
+            {
+                std::lock_guard<std::mutex> lk(self->m_writeMutex);
+                if (!self->m_writeQueue.empty()) {
+                    self->m_writeQueue.pop_front();
+                }
+                if (self->m_writeQueue.empty()) {
+                    return;
+                }
+            }
+            self->doWrite();
         });
 }
 

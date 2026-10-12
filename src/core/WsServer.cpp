@@ -80,6 +80,26 @@ void WsServer::doAccept()
                     if (m_callbacks.onPairRequest)
                         m_callbacks.onPairRequest(sid, payload);
                 };
+                scb.onFileOffer = [this](uint64_t sid, const json& payload) {
+                    if (m_callbacks.onFileOffer)
+                        m_callbacks.onFileOffer(sid, payload);
+                };
+                scb.onFileAccept = [this](uint64_t sid, const json& payload) {
+                    if (m_callbacks.onFileAccept)
+                        m_callbacks.onFileAccept(sid, payload);
+                };
+                scb.onFileReject = [this](uint64_t sid, const json& payload) {
+                    if (m_callbacks.onFileReject)
+                        m_callbacks.onFileReject(sid, payload);
+                };
+                scb.onFileComplete = [this](uint64_t sid, const json& payload) {
+                    if (m_callbacks.onFileComplete)
+                        m_callbacks.onFileComplete(sid, payload);
+                };
+                scb.onFileCancel = [this](uint64_t sid, const json& payload) {
+                    if (m_callbacks.onFileCancel)
+                        m_callbacks.onFileCancel(sid, payload);
+                };
                 scb.getPcPublicKey = [this]() -> std::string {
                     return m_callbacks.getPcPublicKey ? m_callbacks.getPcPublicKey() : "";
                 };
