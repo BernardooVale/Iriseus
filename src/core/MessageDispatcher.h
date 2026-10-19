@@ -30,6 +30,9 @@ enum class MsgType {
     FileComplete,
     FileCancel,
 
+    StartScreen,  // {"type":"start_screen"}
+    StopScreen,   // {"type":"stop_screen"}
+
     Unknown
 };
 
@@ -43,6 +46,8 @@ inline MsgType msgTypeFromString(const std::string& s)
     if (s == "hello")         return MsgType::Hello;
     if (s == "start_camera")  return MsgType::StartCamera;
     if (s == "stop_camera")   return MsgType::StopCamera;
+    if (s == "start_screen")  return MsgType::StartScreen;
+    if (s == "stop_screen")   return MsgType::StopScreen;
     if (s == "ping")          return MsgType::Ping;
     if (s == "pair_request")  return MsgType::PairRequest;
     if (s == "pair_accepted") return MsgType::PairAccepted;

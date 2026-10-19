@@ -141,11 +141,26 @@ void Application::setupServerCallbacks()
             m_fileManager->setCurrentSession(0);
         }
     };
-    cb.onStartCamera = [](uint64_t /*id*/) {
+    cb.onStartCamera = [this](uint64_t /*id*/) {
         qDebug() << "StartCamera solicitado";
+        QMetaObject::invokeMethod(qApp, [this] {
+            if (m_tray) m_tray->updateStreamMode(false);
+        }, Qt::QueuedConnection);
     };
-    cb.onStopCamera = [](uint64_t /*id*/) {
+    cb.onStopCamera = [this](uint64_t /*id*/) {
         qDebug() << "StopCamera solicitado";
+    };
+    cb.onStartScreen = [this](uint64_t /*id*/) {
+        qDebug() << "StartScreen solicitado";
+        QMetaObject::invokeMethod(qApp, [this] {
+            if (m_tray) m_tray->updateStreamMode(true);
+        }, Qt::QueuedConnection);
+    };
+    cb.onStopScreen = [this](uint64_t /*id*/) {
+        qDebug() << "StopScreen solicitado";
+        QMetaObject::invokeMethod(qApp, [this] {
+            if (m_tray) m_tray->updateStreamMode(false);
+        }, Qt::QueuedConnection);
     };
     cb.onPairRequest = [this](uint64_t sessionId, const json& payload) {
         auto pin        = payload.value("pin",        "");

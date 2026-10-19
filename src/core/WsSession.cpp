@@ -72,6 +72,14 @@ void WsSession::handleMessage(const std::string& raw)
         if (m_callbacks.onStopCamera) m_callbacks.onStopCamera(m_id);
         break;
 
+    case MsgType::StartScreen:
+        if (m_callbacks.onStartScreen) m_callbacks.onStartScreen(m_id);
+        break;
+
+    case MsgType::StopScreen:
+        if (m_callbacks.onStopScreen) m_callbacks.onStopScreen(m_id);
+        break;
+
     case MsgType::Ping: {
         json pong = {{"type", "pong"}};
         send(pong.dump());

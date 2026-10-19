@@ -18,6 +18,8 @@ struct ServerCallbacks {
     std::function<void(uint64_t sessionId)> onDeviceDisconnected;
     std::function<void(uint64_t sessionId)> onStartCamera;
     std::function<void(uint64_t sessionId)> onStopCamera;
+    std::function<void(uint64_t sessionId)> onStartScreen;
+    std::function<void(uint64_t sessionId)> onStopScreen;
     std::function<void(uint64_t sessionId, const json& payload)> onPairRequest;
     std::function<void(uint64_t sessionId, const json& payload)> onFileOffer;
     std::function<void(uint64_t sessionId, const json& payload)> onFileAccept;

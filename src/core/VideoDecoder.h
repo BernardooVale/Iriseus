@@ -20,9 +20,12 @@ public:
     VideoDecoder();
     ~VideoDecoder();
 
-    bool init(int width, int height);
+    bool init(int targetWidth = 1920, int targetHeight = 1080);
     void pushNalu(const uint8_t* data, size_t size); // recebe NALUs do socket
     void setOnFrame(OnFrame cb) { m_onFrame = std::move(cb); }
+
+    int targetWidth() const { return m_targetWidth; }
+    int targetHeight() const { return m_targetHeight; }
 
 private:
     void decode(AVPacket* pkt);
@@ -30,12 +33,18 @@ private:
 
     AVCodecContext* m_ctx      = nullptr;
     AVFrame*        m_frame    = nullptr;
-    AVFrame*        m_frameRgb = nullptr;
     SwsContext*     m_sws      = nullptr;
 
-    int m_width  = 0;
-    int m_height = 0;
-    int m_lastFormat = -1;
+    int m_targetWidth  = 1920;
+    int m_targetHeight = 1080;
+
+    int m_srcWidth     = 0;
+    int m_srcHeight    = 0;
+    int m_scaledWidth  = 0;
+    int m_scaledHeight = 0;
+    int m_offsetX      = 0;
+    int m_offsetY      = 0;
+    int m_lastFormat   = -1;
 
     std::vector<uint8_t> m_rgbBuffer;
     OnFrame              m_onFrame;

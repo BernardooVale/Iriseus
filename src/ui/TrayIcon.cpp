@@ -103,9 +103,23 @@ void TrayIcon::updateCameraStatus(bool active)
     updateIcon(active);
     m_actionStartCamera->setVisible(!active);
     m_actionStopCamera->setVisible(active);
+    m_tray->setToolTip(active ? "Iriseus — Câmera ativa" : "Iriseus");
     m_tray->showMessage("Iriseus",
         active ? "Câmera ativa" : "Câmera desconectada",
         QSystemTrayIcon::Information, 2000);
+}
+
+void TrayIcon::updateStreamMode(bool isScreen)
+{
+    if (isScreen) {
+        m_tray->setToolTip("Iriseus — Transmitindo tela do celular");
+        m_tray->showMessage("Iriseus", "Transmitindo tela do celular",
+            QSystemTrayIcon::Information, 2000);
+    } else {
+        m_tray->setToolTip("Iriseus — Câmera ativa");
+        m_tray->showMessage("Iriseus", "Transmitindo câmera do celular",
+            QSystemTrayIcon::Information, 2000);
+    }
 }
 
 void TrayIcon::onPairDevice()

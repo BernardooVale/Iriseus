@@ -27,18 +27,20 @@ StreamReceiver::~StreamReceiver()
 
 bool StreamReceiver::start()
 {
+    int targetW = m_width > 0 ? m_width : 1920;
+    int targetH = m_height > 0 ? m_height : 1080;
+
     m_decoder = std::make_unique<VideoDecoder>();
-    if (!m_decoder->init(0, 0)) return false;
+    if (!m_decoder->init(targetW, targetH)) return false;
 
     m_camera = std::make_unique<VirtualCamera>();
 
     m_decoder->setOnFrame([this](const uint8_t* rgb, int w, int h) {
-        if (w != m_width || h != m_height) {
-            qDebug() << "StreamReceiver: abrindo câmera" << w << "x" << h;
+        if (!m_camera || !m_camera->isOpen()) {
+            qDebug() << "StreamReceiver: abrindo VirtualCamera" << w << "x" << h << "@" << m_fps;
             m_width  = w;
             m_height = h;
-            if (m_camera) m_camera->close();
-            m_camera = std::make_unique<VirtualCamera>();
+            if (!m_camera) m_camera = std::make_unique<VirtualCamera>();
             if (!m_camera->open(w, h, m_fps)) {
                 qWarning() << "StreamReceiver: falha ao abrir VirtualCamera";
                 return;
