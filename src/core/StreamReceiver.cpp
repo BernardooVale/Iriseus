@@ -32,6 +32,7 @@ bool StreamReceiver::start()
 
     m_decoder = std::make_unique<VideoDecoder>();
     if (!m_decoder->init(targetW, targetH)) return false;
+    m_decoder->setFlipHorizontal(m_flipHorizontal.load());
 
     m_camera = std::make_unique<VirtualCamera>();
 
@@ -83,6 +84,19 @@ void StreamReceiver::stop()
     if (m_netThread.joinable())    m_netThread.join();
     if (m_decodeThread.joinable()) m_decodeThread.join();
     if (m_camera) m_camera->close();
+}
+
+void StreamReceiver::setFlipHorizontal(bool flip)
+{
+    m_flipHorizontal = flip;
+    if (m_decoder) {
+        m_decoder->setFlipHorizontal(flip);
+    }
+}
+
+bool StreamReceiver::flipHorizontal() const
+{
+    return m_decoder ? m_decoder->flipHorizontal() : m_flipHorizontal.load();
 }
 
 void StreamReceiver::acceptLoop()

@@ -59,7 +59,8 @@ void WsSession::handleMessage(const std::string& raw)
             {"type",       "welcome"},
             {"deviceName", "Iriseus PC"},
             {"deviceId",   "pc-placeholder-id"},
-            {"pk",         m_callbacks.getPcPublicKey ? m_callbacks.getPcPublicKey() : ""}
+            {"pk",         m_callbacks.getPcPublicKey ? m_callbacks.getPcPublicKey() : ""},
+            {"flip",       m_callbacks.getFlipHorizontal ? m_callbacks.getFlipHorizontal() : true}
         };
         send(reply.dump());
         break;
@@ -78,6 +79,11 @@ void WsSession::handleMessage(const std::string& raw)
 
     case MsgType::StopScreen:
         if (m_callbacks.onStopScreen) m_callbacks.onStopScreen(m_id);
+        break;
+
+    case MsgType::SetFlip:
+        if (m_callbacks.onSetFlip)
+            m_callbacks.onSetFlip(m_id, msg.payload.value("flip", true));
         break;
 
     case MsgType::Ping: {

@@ -21,6 +21,9 @@ struct SessionCallbacks {
     std::function<void(uint64_t sessionId, const std::string& deviceName)> onHello;
     std::function<void(uint64_t sessionId)> onStartCamera;
     std::function<void(uint64_t sessionId)> onStopCamera;
+    std::function<void(uint64_t sessionId)> onStartScreen;
+    std::function<void(uint64_t sessionId)> onStopScreen;
+    std::function<void(uint64_t sessionId, bool flip)> onSetFlip;
     std::function<void(uint64_t sessionId)> onDisconnect;
     std::function<void(uint64_t sessionId, const json& payload)> onPairRequest;
     std::function<void(uint64_t sessionId, const json& payload)> onFileOffer;
@@ -29,6 +32,7 @@ struct SessionCallbacks {
     std::function<void(uint64_t sessionId, const json& payload)> onFileComplete;
     std::function<void(uint64_t sessionId, const json& payload)> onFileCancel;
     std::function<std::string()> getPcPublicKey;
+    std::function<bool()> getFlipHorizontal;
 };
 
 class WsSession : public std::enable_shared_from_this<WsSession>

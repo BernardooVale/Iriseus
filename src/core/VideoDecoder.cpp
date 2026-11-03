@@ -117,5 +117,19 @@ void VideoDecoder::convertToRgb(AVFrame* frame)
               frame->data, frame->linesize, 0, m_srcHeight,
               dstData, dstLinesize);
 
+    if (m_flipHorizontal.load()) {
+        #pragma pack(push, 1)
+        struct Pixel24 { uint8_t b, g, r; };
+        #pragma pack(pop)
+
+        for (int row = 0; row < m_scaledHeight; ++row) {
+            int y = m_offsetY + row;
+            auto* pRow = reinterpret_cast<Pixel24*>(m_rgbBuffer.data() + (y * m_targetWidth + m_offsetX) * 3);
+            for (int x = 0; x < m_scaledWidth / 2; ++x) {
+                std::swap(pRow[x], pRow[m_scaledWidth - 1 - x]);
+            }
+        }
+    }
+
     m_onFrame(m_rgbBuffer.data(), m_targetWidth, m_targetHeight);
 }

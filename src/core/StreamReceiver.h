@@ -23,6 +23,9 @@ public:
 
     void setOnStatusChange(std::function<void(bool)> cb) { m_onStatus = std::move(cb); }
 
+    void setFlipHorizontal(bool flip);
+    bool flipHorizontal() const;
+
 private:
     void acceptLoop();
     void receiveLoop(tcp::socket socket);
@@ -36,6 +39,7 @@ private:
     asio::io_context m_ioc;
     tcp::acceptor    m_acceptor;
     std::atomic<bool> m_running{false};
+    std::atomic<bool> m_flipHorizontal{true};
     std::thread m_netThread;     // recebe dados da rede
     std::thread m_decodeThread;  // decodifica H.264 → RGB
 

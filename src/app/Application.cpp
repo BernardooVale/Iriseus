@@ -49,6 +49,8 @@ bool Application::init()
         m_pairing->restoreDevice(savedId, savedName);
     }
 
+    bool flipHorizontal = settings.value("flipHorizontal", true).toBool();
+
     m_adb = std::make_unique<AdbManager>(45678, 45679, 45680);
     qDebug() << "AdbManager: iniciando init()";
     if (!m_adb->init()) {
@@ -71,6 +73,7 @@ bool Application::init()
     qDebug() << "AdbManager: start() concluído";
 
     m_stream = std::make_unique<StreamReceiver>(45679, 0, 0, 30.0f);
+    m_stream->setFlipHorizontal(flipHorizontal);
     if (!m_stream->start()) {
         qWarning() << "StreamReceiver: falha ao iniciar — Softcam registrado?";
     }
@@ -96,7 +99,18 @@ bool Application::init()
     });
 
     m_tray = std::make_unique<TrayIcon>();
+    m_tray->setFlipHorizontal(flipHorizontal);
     m_tray->show();
+
+    QObject::connect(m_tray.get(), &TrayIcon::flipHorizontalToggled, qApp, [this](bool flip) {
+        if (m_stream) m_stream->setFlipHorizontal(flip);
+        QSettings settings("Iriseus", "Iriseus");
+        settings.setValue("flipHorizontal", flip);
+        if (m_wsServer) {
+            json notify = {{"type", "flip_status"}, {"flip", flip}};
+            m_wsServer->broadcast(notify.dump());
+        }
+    });
 
     QObject::connect(m_tray.get(), &TrayIcon::pairRequested, qApp, [this] {
         auto offer      = m_pairing->createOffer();
@@ -162,6 +176,19 @@ void Application::setupServerCallbacks()
             if (m_tray) m_tray->updateStreamMode(false);
         }, Qt::QueuedConnection);
     };
+    cb.onSetFlip = [this](uint64_t /*id*/, bool flip) {
+        qDebug() << "SetFlip solicitado:" << flip;
+        QMetaObject::invokeMethod(qApp, [this, flip] {
+            if (m_stream) m_stream->setFlipHorizontal(flip);
+            if (m_tray)   m_tray->setFlipHorizontal(flip);
+            QSettings settings("Iriseus", "Iriseus");
+            settings.setValue("flipHorizontal", flip);
+            if (m_wsServer) {
+                json notify = {{"type", "flip_status"}, {"flip", flip}};
+                m_wsServer->broadcast(notify.dump());
+            }
+        }, Qt::QueuedConnection);
+    };
     cb.onPairRequest = [this](uint64_t sessionId, const json& payload) {
         auto pin        = payload.value("pin",        "");
         auto peerPubB64 = payload.value("pk",         "");
@@ -191,6 +218,9 @@ void Application::setupServerCallbacks()
         if (!m_pairing) return "";
         auto offer = m_pairing->currentOffer();
         return offer.pubKeyB64;
+    };
+    cb.getFlipHorizontal = [this]() -> bool {
+        return m_stream ? m_stream->flipHorizontal() : true;
     };
 
     m_wsServer->setCallbacks(std::move(cb));

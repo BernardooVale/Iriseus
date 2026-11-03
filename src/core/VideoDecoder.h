@@ -2,6 +2,7 @@
 #include <functional>
 #include <vector>
 #include <cstdint>
+#include <atomic>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -23,6 +24,9 @@ public:
     bool init(int targetWidth = 1920, int targetHeight = 1080);
     void pushNalu(const uint8_t* data, size_t size); // recebe NALUs do socket
     void setOnFrame(OnFrame cb) { m_onFrame = std::move(cb); }
+
+    void setFlipHorizontal(bool flip) { m_flipHorizontal = flip; }
+    bool flipHorizontal() const { return m_flipHorizontal.load(); }
 
     int targetWidth() const { return m_targetWidth; }
     int targetHeight() const { return m_targetHeight; }
@@ -46,6 +50,7 @@ private:
     int m_offsetY      = 0;
     int m_lastFormat   = -1;
 
+    std::atomic<bool>    m_flipHorizontal{true};
     std::vector<uint8_t> m_rgbBuffer;
     OnFrame              m_onFrame;
 };

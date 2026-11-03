@@ -16,11 +16,13 @@ public:
     void showNotification(const QString& title, const QString& message);
     void updateCameraStatus(bool active);
     void updateStreamMode(bool isScreen);
+    void setFlipHorizontal(bool flip);
 
 signals:
     void pairRequested();
     void openDownloadsRequested();
     void sendFilesRequested();
+    void flipHorizontalToggled(bool flip);
 
 private slots:
     void onActivated(QSystemTrayIcon::ActivationReason reason);
@@ -35,9 +37,10 @@ private:
 
     std::unique_ptr<QSystemTrayIcon>    m_tray;
     std::unique_ptr<QMenu>              m_menu;
-    QAction*                            m_actionStartCamera = nullptr;
-    QAction*                            m_actionStopCamera  = nullptr;
-    QAction*                            m_actionPair        = nullptr;
+    QAction*                            m_actionStartCamera    = nullptr;
+    QAction*                            m_actionStopCamera     = nullptr;
+    QAction*                            m_actionPair           = nullptr;
+    QAction*                            m_actionFlipHorizontal = nullptr;
 
     bool m_cameraActive = false;
 };

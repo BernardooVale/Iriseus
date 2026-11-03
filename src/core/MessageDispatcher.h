@@ -33,6 +33,9 @@ enum class MsgType {
     StartScreen,  // {"type":"start_screen"}
     StopScreen,   // {"type":"stop_screen"}
 
+    SetFlip,      // {"type":"set_flip","flip":true}
+    FlipStatus,   // {"type":"flip_status","flip":true}
+
     Unknown
 };
 
@@ -48,6 +51,8 @@ inline MsgType msgTypeFromString(const std::string& s)
     if (s == "stop_camera")   return MsgType::StopCamera;
     if (s == "start_screen")  return MsgType::StartScreen;
     if (s == "stop_screen")   return MsgType::StopScreen;
+    if (s == "set_flip")      return MsgType::SetFlip;
+    if (s == "flip_status")   return MsgType::FlipStatus;
     if (s == "ping")          return MsgType::Ping;
     if (s == "pair_request")  return MsgType::PairRequest;
     if (s == "pair_accepted") return MsgType::PairAccepted;

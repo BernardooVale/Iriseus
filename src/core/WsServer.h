@@ -20,6 +20,7 @@ struct ServerCallbacks {
     std::function<void(uint64_t sessionId)> onStopCamera;
     std::function<void(uint64_t sessionId)> onStartScreen;
     std::function<void(uint64_t sessionId)> onStopScreen;
+    std::function<void(uint64_t sessionId, bool flip)> onSetFlip;
     std::function<void(uint64_t sessionId, const json& payload)> onPairRequest;
     std::function<void(uint64_t sessionId, const json& payload)> onFileOffer;
     std::function<void(uint64_t sessionId, const json& payload)> onFileAccept;
@@ -27,6 +28,7 @@ struct ServerCallbacks {
     std::function<void(uint64_t sessionId, const json& payload)> onFileComplete;
     std::function<void(uint64_t sessionId, const json& payload)> onFileCancel;
     std::function<std::string()> getPcPublicKey;
+    std::function<bool()> getFlipHorizontal;
 };
 
 class WsServer
@@ -39,6 +41,7 @@ public:
     bool start();
     void stop();
     void sendTo(uint64_t sessionId, const std::string& message);
+    void broadcast(const std::string& message);
 
     bool isRunning() const { return m_running.load(); }
 

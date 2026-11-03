@@ -71,6 +71,18 @@ void WsServer::doAccept()
                     if (m_callbacks.onStopCamera)
                         m_callbacks.onStopCamera(sid);
                 };
+                scb.onStartScreen = [this](uint64_t sid) {
+                    if (m_callbacks.onStartScreen)
+                        m_callbacks.onStartScreen(sid);
+                };
+                scb.onStopScreen = [this](uint64_t sid) {
+                    if (m_callbacks.onStopScreen)
+                        m_callbacks.onStopScreen(sid);
+                };
+                scb.onSetFlip = [this](uint64_t sid, bool flip) {
+                    if (m_callbacks.onSetFlip)
+                        m_callbacks.onSetFlip(sid, flip);
+                };
                 scb.onDisconnect = [this](uint64_t sid) {
                     removeSession(sid);
                     if (m_callbacks.onDeviceDisconnected)
@@ -103,6 +115,9 @@ void WsServer::doAccept()
                 scb.getPcPublicKey = [this]() -> std::string {
                     return m_callbacks.getPcPublicKey ? m_callbacks.getPcPublicKey() : "";
                 };
+                scb.getFlipHorizontal = [this]() -> bool {
+                    return m_callbacks.getFlipHorizontal ? m_callbacks.getFlipHorizontal() : true;
+                };
 
                 auto session = std::make_shared<WsSession>(
                     std::move(socket), id, std::move(scb));
@@ -123,4 +138,13 @@ void WsServer::sendTo(uint64_t sessionId, const std::string& message)
     auto it = m_sessions.find(sessionId);
     if (it != m_sessions.end())
         it->second->send(message);
+}
+
+void WsServer::broadcast(const std::string& message)
+{
+    asio::post(m_ioc, [this, message]() {
+        for (auto& pair : m_sessions) {
+            pair.second->send(message);
+        }
+    });
 }

@@ -3,6 +3,7 @@
 #include <QIcon>
 #include <QStyle>
 #include <QMessageBox>
+#include <QSignalBlocker>
 
 TrayIcon::TrayIcon(QObject* parent)
     : QObject(parent)
@@ -43,6 +44,11 @@ void TrayIcon::buildMenu()
     m_actionStopCamera->setVisible(false);
 
     m_menu->addSeparator();
+    m_actionFlipHorizontal = m_menu->addAction("Inverter horizontalmente (desespelhar)");
+    m_actionFlipHorizontal->setCheckable(true);
+    m_actionFlipHorizontal->setChecked(true);
+
+    m_menu->addSeparator();
     QAction* actionQuit = m_menu->addAction("Sair");
 
     connect(m_actionStartCamera,    &QAction::triggered, this, &TrayIcon::onStartCamera);
@@ -51,6 +57,7 @@ void TrayIcon::buildMenu()
     connect(m_actionPair,           &QAction::triggered, this, &TrayIcon::onPairDevice);
     connect(actionSendFile,         &QAction::triggered, this, [this]{ emit sendFilesRequested(); });
     connect(actionOpenDownloads,    &QAction::triggered, this, [this]{ emit openDownloadsRequested(); });
+    connect(m_actionFlipHorizontal, &QAction::toggled,   this, &TrayIcon::flipHorizontalToggled);
 }
 
 void TrayIcon::updateIcon(bool active)
@@ -119,6 +126,14 @@ void TrayIcon::updateStreamMode(bool isScreen)
         m_tray->setToolTip("Iriseus — Câmera ativa");
         m_tray->showMessage("Iriseus", "Transmitindo câmera do celular",
             QSystemTrayIcon::Information, 2000);
+    }
+}
+
+void TrayIcon::setFlipHorizontal(bool flip)
+{
+    if (m_actionFlipHorizontal && m_actionFlipHorizontal->isChecked() != flip) {
+        QSignalBlocker blocker(m_actionFlipHorizontal);
+        m_actionFlipHorizontal->setChecked(flip);
     }
 }
 
